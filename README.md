@@ -113,7 +113,8 @@ cd web && pnpm build      # tsc + Router-Codegen + Vite
 ### App – Railway
 
 1. Neues Projekt → **Deploy from GitHub repo**, dieses Repo.
-2. Builder: **Dockerfile**, Pfad `backend/Dockerfile`, Build-Context `/` (Repo-Root).
+2. Builder & Dockerfile-Pfad kommen aus [`railway.json`](railway.json) – nichts einzustellen.
+   (Root Directory in Railway auf `/` lassen; der Dockerfile-Context ist das Repo-Root.)
 3. Variablen setzen:
 
    | Variable | Wert |
