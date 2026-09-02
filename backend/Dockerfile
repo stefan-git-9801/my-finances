@@ -18,8 +18,7 @@ COPY global.json ./
 COPY backend/ ./backend/
 RUN dotnet restore backend/Backend.slnx
 RUN dotnet publish backend/src/MyFinances.Api/MyFinances.Api.csproj \
-    -c Release -o /app/publish --no-restore \
-    -p:OpenApiGenerateDocuments=false
+    -c Release -o /app/publish --no-restore
 
 # 3. Runtime image --------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
