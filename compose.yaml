@@ -1,0 +1,47 @@
+# Local development stack for Podman (or Docker).
+#
+#   podman compose up -d db adminer      # just the database – run API/web on the host
+#   podman compose up --build            # full stack, API serves the built frontend on :8080
+#
+# Copy .env.example to .env first.
+
+services:
+  db:
+    image: docker.io/library/postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myfinances}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myfinances}
+      POSTGRES_DB: ${POSTGRES_DB:-myfinances}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myfinances} -d ${POSTGRES_DB:-myfinances}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      ConnectionStrings__AppDb: "Host=db;Port=5432;Database=${POSTGRES_DB:-myfinances};Username=${POSTGRES_USER:-myfinances};Password=${POSTGRES_PASSWORD:-myfinances}"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      RUN_MIGRATIONS_ON_STARTUP: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  adminer:
+    image: docker.io/library/adminer:5
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

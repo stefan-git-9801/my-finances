@@ -1,0 +1,31 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+[Rr]elease/
+[Dd]ebug/
+artifacts/
+*.nupkg
+
+# --- Node / Vite ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+web/src/routeTree.gen.ts
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json

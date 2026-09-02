@@ -1,0 +1,54 @@
+@host = http://localhost:5023
+
+### Register a user
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "me@example.com",
+  "password": "Passw0rd!"
+}
+
+### Login (sets the auth cookie)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "me@example.com",
+  "password": "Passw0rd!"
+}
+
+### Current user
+GET {{host}}/api/auth/me
+
+### Logout
+POST {{host}}/api/auth/logout
+
+### List accounts
+GET {{host}}/api/accounts
+
+### Create an account
+POST {{host}}/api/accounts
+Content-Type: application/json
+
+{
+  "name": "Sparkonto",
+  "currency": "EUR"
+}
+
+### List transactions for an account
+GET {{host}}/api/transactions?accountId=00000000-0000-0000-0000-000000000000
+
+### Create a transaction
+POST {{host}}/api/transactions
+Content-Type: application/json
+
+{
+  "accountId": "00000000-0000-0000-0000-000000000000",
+  "amount": -19.99,
+  "description": "Streaming-Abo",
+  "bookedOn": "2026-09-01"
+}
+
+### OpenAPI document
+GET {{host}}/openapi/v1.json
