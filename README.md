@@ -76,6 +76,10 @@ compose.yaml                       Podman: db + adminer + api
 
 Registrieren, einloggen, Konto + Buchung anlegen.
 
+> **VS Code:** `Cmd+Shift+P → Run Task` – Task **dev** startet DB + API (watch) + Vite
+> zusammen. Weitere Tasks: `build`, `test: backend`, `generate: api-client`,
+> `db: up/down/reset`, `stack: up (container)`.
+
 ## API-Client neu generieren (Orval)
 
 Nach jeder Änderung an den API-Endpunkten oder DTOs:

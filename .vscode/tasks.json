@@ -1,0 +1,186 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev",
+      "detail": "DB + API (watch) + Frontend (Vite)",
+      "dependsOrder": "sequence",
+      "dependsOn": ["db: up", "dev: servers"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: servers",
+      "dependsOrder": "parallel",
+      "dependsOn": ["api: watch", "web: dev"],
+      "problemMatcher": []
+    },
+
+    {
+      "label": "db: up",
+      "detail": "Start Postgres + Adminer and wait until healthy",
+      "type": "shell",
+      "command": "podman compose up -d --wait db adminer",
+      "presentation": { "reveal": "silent", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "db: down",
+      "detail": "Stop the containers (keeps the data volume)",
+      "type": "shell",
+      "command": "podman compose down",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: reset",
+      "detail": "Drop the data volume and start fresh",
+      "type": "shell",
+      "command": "podman compose down -v && podman compose up -d --wait db adminer",
+      "problemMatcher": []
+    },
+
+    {
+      "label": "api: watch",
+      "detail": "dotnet watch run (hot reload)",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["watch", "--project", "backend/src/MyFinances.Api", "run"],
+      "isBackground": true,
+      "presentation": { "group": "dev", "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": {
+        "owner": "dotnet",
+        "source": "dotnet",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^\\s*(.+?)\\((\\d+),(\\d+)\\):\\s+(error|warning)\\s+(\\w+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*(Building\\.\\.\\.|Restarting|dotnet watch ⌚).*$",
+          "endsPattern": "^.*(Now listening on|Application started|Hot reload).*$"
+        }
+      }
+    },
+    {
+      "label": "api: run",
+      "detail": "dotnet run (no hot reload)",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--project", "backend/src/MyFinances.Api"],
+      "isBackground": true,
+      "presentation": { "group": "dev", "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": {
+        "owner": "dotnet",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^\\s*(.+?)\\((\\d+),(\\d+)\\):\\s+(error|warning)\\s+(\\w+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*(Building\\.\\.\\.).*$",
+          "endsPattern": "^.*(Now listening on|Application started).*$"
+        }
+      }
+    },
+    {
+      "label": "web: dev",
+      "detail": "Vite dev server (proxies /api to the API)",
+      "type": "shell",
+      "command": "pnpm dev",
+      "options": { "cwd": "${workspaceFolder}/web" },
+      "isBackground": true,
+      "presentation": { "group": "dev", "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^([^\\s].*)\\((\\d+),(\\d+)\\):\\s*(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*(VITE|vite v).*$",
+          "endsPattern": "^.*(ready in \\d+|Local:\\s+http).*$"
+        }
+      }
+    },
+
+    {
+      "label": "build",
+      "detail": "Build backend + frontend",
+      "dependsOrder": "parallel",
+      "dependsOn": ["build: backend", "build: web"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "build: backend",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "backend/Backend.slnx"],
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build: web",
+      "type": "shell",
+      "command": "pnpm build",
+      "options": { "cwd": "${workspaceFolder}/web" },
+      "group": "build",
+      "problemMatcher": []
+    },
+
+    {
+      "label": "test: backend",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "backend/Backend.slnx"],
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+
+    {
+      "label": "generate: api-client",
+      "detail": "Rebuild OpenAPI doc + regenerate the Orval client",
+      "dependsOrder": "sequence",
+      "dependsOn": ["generate: openapi", "generate: orval"],
+      "problemMatcher": []
+    },
+    {
+      "label": "generate: openapi",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "backend/src/MyFinances.Api/MyFinances.Api.csproj"],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "generate: orval",
+      "type": "shell",
+      "command": "pnpm generate",
+      "options": { "cwd": "${workspaceFolder}/web" },
+      "problemMatcher": []
+    },
+
+    {
+      "label": "stack: up (container)",
+      "detail": "Build and run the full stack in containers (like prod, :8080)",
+      "type": "shell",
+      "command": "podman compose up --build",
+      "problemMatcher": []
+    }
+  ]
+}
