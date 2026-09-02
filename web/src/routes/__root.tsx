@@ -19,11 +19,13 @@ import { useCurrentUser, useLogout } from '../lib/auth'
 export const Route = createRootRoute({ component: RootLayout })
 
 const navItems = [
+  { to: '/', label: 'Übersicht', exact: true },
   { to: '/accounts', label: 'Konten' },
   { to: '/transactions', label: 'Buchungen' },
   { to: '/transfers', label: 'Umbuchungen' },
   { to: '/categories', label: 'Kategorien' },
   { to: '/recurring', label: 'Vorlagen' },
+  { to: '/reports', label: 'Auswertungen' },
 ] as const
 
 const useStyles = makeStyles({
@@ -92,7 +94,7 @@ function RootLayout() {
   }
 
   if (user && onLoginPage) {
-    return <Navigate to="/accounts" />
+    return <Navigate to="/" />
   }
 
   if (!user) {
@@ -111,6 +113,7 @@ function RootLayout() {
               to={item.to}
               className={styles.link}
               activeProps={{ className: `${styles.link} ${styles.activeLink}` }}
+              activeOptions={'exact' in item && item.exact ? { exact: true } : undefined}
             >
               {item.label}
             </Link>

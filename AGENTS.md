@@ -73,7 +73,15 @@ Commit both. CI (`.github/workflows/ci.yml`) fails if they are stale (`git diff 
   Never expose EF entities directly.
 - Validation via `MiniValidation` (`MiniValidator.TryValidate`) + DataAnnotations on DTOs.
 - Frontend: functional components, hooks from `web/src/api/generated/**`, Fluent UI
-  components + `makeStyles`. Route files under `web/src/routes/`.
+  components + `makeStyles`. Route files under `web/src/routes/`. Shared bits:
+  `components/` (PageHeader, ConfirmDialog, StatTile), `lib/` (format, labels, errors,
+  chartColors).
+- Charts use `@fluentui/react-charts` (`DonutChart`, `GroupedVerticalBarChart`, `LineChart`
+  inside a `ResponsiveContainer`). Colours come **only** from `lib/chartColors.ts` – a fixed
+  categorical palette from the `dataviz` skill, validated against the Fluent card surfaces
+  (`node scripts/validate_palette.js` in that skill). Assign hues by entity index, never
+  cycle a 9th; income = green, expense = red. `useIsDark()` (`theme.ts`) picks the light/dark
+  variant.
 - C#: 4-space indent, `Nullable` enabled. TS/TSX: 2-space, Prettier (`web/.prettierrc.json`),
   no semicolons, single quotes.
 
