@@ -4,7 +4,8 @@
 # 1. Build the React frontend -------------------------------------------------
 FROM node:22-alpine AS web
 WORKDIR /web
-RUN corepack enable
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 COPY web/package.json web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY web/ ./
