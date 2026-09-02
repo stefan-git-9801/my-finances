@@ -140,14 +140,36 @@ var isOpenApiDocumentBuild =
 if (!isOpenApiDocumentBuild && app.Configuration.GetValue("RUN_MIGRATIONS_ON_STARTUP", true))
 {
     using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    var startupLogger = scope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Startup");
 
-    await DbSeeder.SeedCategoriesAsync(scope.ServiceProvider);
-    await DbSeeder.SeedAdminUserAsync(scope.ServiceProvider);
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    var materializer = scope.ServiceProvider.GetRequiredService<RecurringMaterializer>();
-    await materializer.MaterializeDueAsync();
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+        if (pending.Count > 0)
+            startupLogger.LogInformation("Applying {Count} pending migration(s): {Migrations}",
+                pending.Count, string.Join(", ", pending));
+
+        await db.Database.MigrateAsync();
+
+        await DbSeeder.SeedCategoriesAsync(scope.ServiceProvider);
+        await DbSeeder.SeedAdminUserAsync(scope.ServiceProvider);
+
+        var materializer = scope.ServiceProvider.GetRequiredService<RecurringMaterializer>();
+        await materializer.MaterializeDueAsync();
+
+        startupLogger.LogInformation("Startup database work completed.");
+    }
+    catch (Exception ex)
+    {
+        startupLogger.LogCritical(ex,
+            "Startup database work failed – the app will not start. If the database already has an "
+            + "older schema, reset it (drop all tables) and redeploy, or set RUN_MIGRATIONS_ON_STARTUP=false.");
+        throw;
+    }
 }
 
 app.UseForwardedHeaders();
