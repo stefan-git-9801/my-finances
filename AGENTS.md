@@ -94,6 +94,12 @@ Commit both. CI (`.github/workflows/ci.yml`) fails if they are stale (`git diff 
   (Neon/Railway form) – `DatabaseConnectionString.Normalize` converts it.
 - Config keys: `ConnectionStrings__AppDb` (or `DATABASE_URL`), `RUN_MIGRATIONS_ON_STARTUP`,
   `PORT` (host-provided), `ASPNETCORE_ENVIRONMENT`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+- Two `dotnet` builds of the API project at once (e.g. an agent building while `dotnet run`
+  is up) corrupt `obj/` – symptom: `Failed to read '…/obj\Debug/…/staticwebassets.development.json'`.
+  Fix: stop all `dotnet` processes, `rm -rf backend/src/*/obj backend/src/*/bin`, rebuild once.
+- `RelationalEventId.ConnectionError` is downgraded to Debug in `Program.cs` – `MigrateAsync()`
+  logs it at Error on the first start (DB doesn't exist yet); real outages still surface as
+  the failing request's exception + 500.
 
 ## Don't
 

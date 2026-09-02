@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using MyFinances.Api.Balances;
 using MyFinances.Api.Data;
 using MyFinances.Api.Features.Accounts;
@@ -37,7 +38,12 @@ if (string.IsNullOrWhiteSpace(rawConnectionString))
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(DatabaseConnectionString.Normalize(rawConnectionString)));
+    options
+        .UseNpgsql(DatabaseConnectionString.Normalize(rawConnectionString))
+        // `MigrateAsync()` probes whether the database exists before creating it; on the very
+        // first start that probe fails and EF logs it at Error level. Downgrade that one event
+        // to Debug – a genuine outage still surfaces as the failing query's exception + HTTP 500.
+        .ConfigureWarnings(w => w.Log((RelationalEventId.ConnectionError, LogLevel.Debug))));
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<BalanceService>();
