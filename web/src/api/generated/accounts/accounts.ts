@@ -23,6 +23,7 @@ import type {
 import type {
   AccountResponse,
   CreateAccountRequest,
+  ErrorResponse,
   HttpValidationProblemDetails,
   UpdateAccountRequest,
 } from '../model'
@@ -401,7 +402,7 @@ export const deleteAccount = (id: string, signal?: AbortSignal) => {
 export const getDeleteAccountMutationKey = () => ['deleteAccount'] as const
 
 export const getDeleteAccountMutationOptions = <
-  TError = ErrorType<void>,
+  TError = ErrorType<void | ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -437,10 +438,10 @@ export const getDeleteAccountMutationOptions = <
 
 export type DeleteAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAccount>>>
 
-export type DeleteAccountMutationError = ErrorType<void>
+export type DeleteAccountMutationError = ErrorType<void | ErrorResponse>
 export type DeleteAccountMutationVariables = { id: string }
 
-export const useDeleteAccount = <TError = ErrorType<void>, TContext = unknown>(
+export const useDeleteAccount = <TError = ErrorType<void | ErrorResponse>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteAccount>>,

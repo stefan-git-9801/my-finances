@@ -20,12 +20,7 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query'
 
-import type {
-  CurrentUserResponse,
-  HttpValidationProblemDetails,
-  LoginRequest,
-  RegisterRequest,
-} from '../model'
+import type { CurrentUserResponse, HttpValidationProblemDetails, LoginRequest } from '../model'
 
 import { customInstance } from '../../mutator'
 import type { ErrorType, BodyType } from '../../mutator'
@@ -45,76 +40,6 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result
 }
 
-export const register = (registerRequest: BodyType<RegisterRequest>, signal?: AbortSignal) => {
-  return customInstance<void>({
-    url: `/api/auth/register`,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    data: registerRequest,
-    signal,
-  })
-}
-
-export const getRegisterMutationKey = () => ['register'] as const
-
-export const getRegisterMutationOptions = <
-  TError = ErrorType<HttpValidationProblemDetails>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof register>>,
-    TError,
-    RegisterMutationVariables,
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof register>>,
-  TError,
-  RegisterMutationVariables,
-  TContext
-> => {
-  const mutationKey = getRegisterMutationKey()
-  const { mutation: mutationOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof register>>,
-    RegisterMutationVariables
-  > = (props) => {
-    const { data } = props ?? {}
-
-    return register(data)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type RegisterMutationResult = NonNullable<Awaited<ReturnType<typeof register>>>
-export type RegisterMutationBody = BodyType<RegisterRequest>
-export type RegisterMutationError = ErrorType<HttpValidationProblemDetails>
-export type RegisterMutationVariables = { data: BodyType<RegisterRequest> }
-
-export const useRegister = <TError = ErrorType<HttpValidationProblemDetails>, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof register>>,
-      TError,
-      RegisterMutationVariables,
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof register>>,
-  TError,
-  RegisterMutationVariables,
-  TContext
-> => {
-  return useMutation(getRegisterMutationOptions(options), queryClient)
-}
 export const login = (loginRequest: BodyType<LoginRequest>, signal?: AbortSignal) => {
   return customInstance<void>({
     url: `/api/auth/login`,

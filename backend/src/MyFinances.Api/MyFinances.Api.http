@@ -1,21 +1,12 @@
 @host = http://localhost:5023
 
-### Register a user
-POST {{host}}/api/auth/register
-Content-Type: application/json
-
-{
-  "email": "me@example.com",
-  "password": "Passw0rd!"
-}
-
-### Login (sets the auth cookie)
+### Login (sets the auth cookie). The single user is seeded from ADMIN_EMAIL / ADMIN_PASSWORD.
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "me@example.com",
-  "password": "Passw0rd!"
+  "email": "dev@my-finances.local",
+  "password": "DevPass123"
 }
 
 ### Current user
@@ -24,7 +15,10 @@ GET {{host}}/api/auth/me
 ### Logout
 POST {{host}}/api/auth/logout
 
-### List accounts
+### List categories (9 defaults are seeded on first start)
+GET {{host}}/api/categories
+
+### List accounts (with derived current balance)
 GET {{host}}/api/accounts
 
 ### Create an account
@@ -33,11 +27,12 @@ Content-Type: application/json
 
 {
   "name": "Sparkonto",
-  "currency": "EUR"
+  "type": "Savings",
+  "startingBalance": 1000
 }
 
-### List transactions for an account
-GET {{host}}/api/transactions?accountId=00000000-0000-0000-0000-000000000000
+### List transactions (filters: from, to, accountId, categoryId, type)
+GET {{host}}/api/transactions
 
 ### Create a transaction
 POST {{host}}/api/transactions
@@ -45,10 +40,50 @@ Content-Type: application/json
 
 {
   "accountId": "00000000-0000-0000-0000-000000000000",
-  "amount": -19.99,
-  "description": "Streaming-Abo",
+  "categoryId": "00000000-0000-0000-0000-000000000000",
+  "type": "Expense",
+  "amount": 19.99,
+  "note": "Streaming-Abo",
   "bookedOn": "2026-09-01"
 }
+
+### Export transactions as CSV
+GET {{host}}/api/transactions/export
+
+### Create a transfer between two accounts
+POST {{host}}/api/transfers
+Content-Type: application/json
+
+{
+  "fromAccountId": "00000000-0000-0000-0000-000000000000",
+  "toAccountId": "00000000-0000-0000-0000-000000000000",
+  "amount": 200,
+  "note": "Bargeld abheben",
+  "bookedOn": "2026-09-01"
+}
+
+### Create a recurring template (monthly, fixed day)
+POST {{host}}/api/recurring-templates
+Content-Type: application/json
+
+{
+  "accountId": "00000000-0000-0000-0000-000000000000",
+  "categoryId": "00000000-0000-0000-0000-000000000000",
+  "type": "Expense",
+  "amount": 800,
+  "note": "Miete",
+  "dayOfMonth": 1,
+  "startDate": "2026-01-01",
+  "endDate": null,
+  "isActive": true
+}
+
+### Dashboard (net worth, month income/expense, savings rate)
+GET {{host}}/api/dashboard
+
+### Reports
+GET {{host}}/api/reports/expenses-by-category
+GET {{host}}/api/reports/cashflow?months=12
 
 ### OpenAPI document
 GET {{host}}/openapi/v1.json

@@ -22,6 +22,7 @@ import type {
 
 import type {
   CreateTransactionRequest,
+  ExportTransactionsParams,
   GetTransactionsParams,
   HttpValidationProblemDetails,
   TransactionResponse,
@@ -229,6 +230,110 @@ export const useCreateTransaction = <
 > => {
   return useMutation(getCreateTransactionMutationOptions(options), queryClient)
 }
+export const exportTransactions = (params?: ExportTransactionsParams, signal?: AbortSignal) => {
+  return customInstance<void>({ url: `/api/transactions/export`, method: 'GET', params, signal })
+}
+
+export const getExportTransactionsQueryKey = (params?: ExportTransactionsParams) => {
+  return [`/api/transactions/export`, ...(params ? [params] : [])] as const
+}
+
+export const getExportTransactionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportTransactions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportTransactionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportTransactions>>, TError, TData>>
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey = queryOptions?.queryKey ?? getExportTransactionsQueryKey(params)
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportTransactions>>> = ({ signal }) =>
+    exportTransactions(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportTransactions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExportTransactionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportTransactions>>
+>
+export type ExportTransactionsQueryError = ErrorType<unknown>
+
+export function useExportTransactions<
+  TData = Awaited<ReturnType<typeof exportTransactions>>,
+  TError = ErrorType<unknown>,
+>(
+  params: undefined | ExportTransactionsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportTransactions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportTransactions>>,
+          TError,
+          Awaited<ReturnType<typeof exportTransactions>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportTransactions<
+  TData = Awaited<ReturnType<typeof exportTransactions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof exportTransactions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportTransactions>>,
+          TError,
+          Awaited<ReturnType<typeof exportTransactions>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportTransactions<
+  TData = Awaited<ReturnType<typeof exportTransactions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportTransactionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportTransactions>>, TError, TData>>
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useExportTransactions<
+  TData = Awaited<ReturnType<typeof exportTransactions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportTransactionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportTransactions>>, TError, TData>>
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getExportTransactionsQueryOptions(params, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+
+  return withQueryKey(query, queryOptions.queryKey)
+}
+
 export const getTransaction = (id: string, signal?: AbortSignal) => {
   return customInstance<TransactionResponse>({
     url: `/api/transactions/${id}`,

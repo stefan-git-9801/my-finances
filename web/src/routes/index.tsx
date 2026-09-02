@@ -12,9 +12,11 @@ import {
   DialogSurface,
   DialogTitle,
   DialogTrigger,
+  Dropdown,
   Field,
   Input,
   MessageBar,
+  Option,
   Spinner,
   Subtitle1,
   Title2,
@@ -27,6 +29,9 @@ import {
   useCreateAccount,
   useGetAccounts,
 } from '../api/generated/accounts/accounts'
+import { AccountType } from '../api/generated/model/accountType'
+import { accountTypeLabel, accountTypeOptions } from '../lib/labels'
+import { formatEuro, parseAmount } from '../lib/format'
 
 export const Route = createFileRoute('/')({ component: AccountsPage })
 
@@ -46,8 +51,12 @@ const useStyles = makeStyles({
     ...shorthands.padding('20px'),
     rowGap: '4px',
   },
-  currency: {
+  type: {
     color: tokens.colorNeutralForeground3,
+  },
+  balance: {
+    marginTop: '8px',
+    fontWeight: tokens.fontWeightSemibold,
   },
   form: {
     display: 'flex',
@@ -63,7 +72,8 @@ function AccountsPage() {
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState('EUR')
+  const [type, setType] = useState<AccountType>(AccountType.Checking)
+  const [startingBalance, setStartingBalance] = useState('0')
 
   const createAccount = useCreateAccount({
     mutation: {
@@ -71,14 +81,17 @@ function AccountsPage() {
         await queryClient.invalidateQueries({ queryKey: getGetAccountsQueryKey() })
         setOpen(false)
         setName('')
-        setCurrency('EUR')
+        setType(AccountType.Checking)
+        setStartingBalance('0')
       },
     },
   })
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
-    createAccount.mutate({ data: { name, currency } })
+    createAccount.mutate({
+      data: { name, type, startingBalance: parseAmount(startingBalance) || 0 },
+    })
   }
 
   return (
@@ -97,11 +110,24 @@ function AccountsPage() {
                   <Field label="Name" required>
                     <Input value={name} onChange={(_, d) => setName(d.value)} />
                   </Field>
-                  <Field label="Währung (3 Buchstaben)" required>
+                  <Field label="Typ" required>
+                    <Dropdown
+                      selectedOptions={[type]}
+                      value={accountTypeLabel[type]}
+                      onOptionSelect={(_, d) => setType(d.optionValue as AccountType)}
+                    >
+                      {accountTypeOptions.map((t) => (
+                        <Option key={t} value={t}>
+                          {accountTypeLabel[t]}
+                        </Option>
+                      ))}
+                    </Dropdown>
+                  </Field>
+                  <Field label="Startsaldo" required>
                     <Input
-                      value={currency}
-                      maxLength={3}
-                      onChange={(_, d) => setCurrency(d.value.toUpperCase())}
+                      value={startingBalance}
+                      onChange={(_, d) => setStartingBalance(d.value)}
+                      placeholder="0,00"
                     />
                   </Field>
                   {createAccount.isError && (
@@ -117,7 +143,7 @@ function AccountsPage() {
                   <Button
                     appearance="primary"
                     type="submit"
-                    disabled={createAccount.isPending || name.trim() === '' || currency.length !== 3}
+                    disabled={createAccount.isPending || name.trim() === ''}
                   >
                     Anlegen
                   </Button>
@@ -139,7 +165,8 @@ function AccountsPage() {
           {accounts.data.map((account) => (
             <Card key={account.id} className={styles.card}>
               <Subtitle1>{account.name}</Subtitle1>
-              <Body1 className={styles.currency}>{account.currency}</Body1>
+              <Body1 className={styles.type}>{accountTypeLabel[account.type]}</Body1>
+              <Body1 className={styles.balance}>{formatEuro(account.currentBalance)}</Body1>
             </Card>
           ))}
         </div>

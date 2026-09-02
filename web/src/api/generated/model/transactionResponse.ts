@@ -4,12 +4,18 @@
  * MyFinances.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { TransactionType } from './transactionType'
 
 export interface TransactionResponse {
   id: string
   accountId: string
+  categoryId: string
+  type: TransactionType
   amount: number
-  description: string
+  /** @nullable */
+  note: string | null
   bookedOn: string
+  /** @nullable */
+  recurringTemplateId: string | null
   createdAt: string
 }

@@ -1,12 +1,20 @@
 using System.Reflection;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi;
 using Microsoft.EntityFrameworkCore;
+using MyFinances.Api.Balances;
 using MyFinances.Api.Data;
 using MyFinances.Api.Features.Accounts;
 using MyFinances.Api.Features.Auth;
+using MyFinances.Api.Features.Categories;
+using MyFinances.Api.Features.Dashboard;
+using MyFinances.Api.Features.Recurring;
+using MyFinances.Api.Features.Reports;
 using MyFinances.Api.Features.Transactions;
+using MyFinances.Api.Features.Transfers;
+using MyFinances.Api.Recurring;
 using MyFinances.Data;
 using MyFinances.Data.Auth;
 
@@ -30,6 +38,14 @@ if (string.IsNullOrWhiteSpace(rawConnectionString))
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(DatabaseConnectionString.Normalize(rawConnectionString)));
+
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<BalanceService>();
+builder.Services.AddScoped<RecurringMaterializer>();
+
+// Serialize enums as strings so the generated TypeScript client gets string unions.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // --- Identity: cookie auth for a same-origin SPA ---
 builder.Services
@@ -112,8 +128,11 @@ if (!isOpenApiDocumentBuild && app.Configuration.GetValue("RUN_MIGRATIONS_ON_STA
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
-    if (app.Environment.IsDevelopment())
-        await DbSeeder.SeedAsync(scope.ServiceProvider);
+    await DbSeeder.SeedCategoriesAsync(scope.ServiceProvider);
+    await DbSeeder.SeedAdminUserAsync(scope.ServiceProvider);
+
+    var materializer = scope.ServiceProvider.GetRequiredService<RecurringMaterializer>();
+    await materializer.MaterializeDueAsync();
 }
 
 app.UseForwardedHeaders();
@@ -129,7 +148,12 @@ app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapAccountsEndpoints();
+app.MapCategoriesEndpoints();
 app.MapTransactionsEndpoints();
+app.MapTransfersEndpoints();
+app.MapRecurringEndpoints();
+app.MapDashboardEndpoints();
+app.MapReportsEndpoints();
 
 // SPA fallback: any non-API, non-file route serves index.html.
 app.MapFallbackToFile("index.html");

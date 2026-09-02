@@ -5,8 +5,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface RegisterRequest {
-  email: string
-  /** @minLength 8 */
-  password: string
+export type GetCashflowParams = {
+  /**
+   * @pattern ^-?(?:0|[1-9]\d*)$
+   */
+  months?: number | string
 }

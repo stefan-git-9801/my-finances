@@ -56,7 +56,9 @@ compose.yaml                       Podman: db + adminer + api
    Adminer (DB-UI): http://localhost:8081 · System *PostgreSQL*, Server `db`,
    Benutzer/Passwort/Datenbank `myfinances`.
 
-2. API starten (migriert und seedet beim Start automatisch):
+2. API starten (migriert beim Start, seedet die Standard-Kategorien und legt den
+   einzigen Nutzer aus `ADMIN_EMAIL` / `ADMIN_PASSWORD` an – lokal aus
+   `appsettings.Development.json`, Standard `dev@my-finances.local` / `DevPass123`):
 
    ```bash
    dotnet run --project backend/src/MyFinances.Api
@@ -74,7 +76,7 @@ compose.yaml                       Podman: db + adminer + api
 
    → http://localhost:5173 (Vite proxyt `/api` und `/openapi` an die API)
 
-Registrieren, einloggen, Konto + Buchung anlegen.
+Einloggen (Einzelnutzer-App, **keine Registrierung**), Konto + Buchung anlegen.
 
 > **VS Code:** `Cmd+Shift+P → Run Task` – Task **dev** startet DB + API (watch) + Vite
 > zusammen. Weitere Tasks: `build`, `test: backend`, `generate: api-client`,
@@ -126,8 +128,12 @@ cd web && pnpm build      # tsc + Router-Codegen + Vite
    | `ConnectionStrings__AppDb` | Neon-Connection-String |
    | `ASPNETCORE_ENVIRONMENT` | `Production` |
    | `RUN_MIGRATIONS_ON_STARTUP` | `true` |
+   | `ADMIN_EMAIL` | E-Mail des einzigen Nutzers |
+   | `ADMIN_PASSWORD` | Passwort (mind. 8 Zeichen, Groß-/Kleinbuchstabe + Ziffer) |
 
-   `PORT` setzt Railway selbst – die App bindet automatisch daran.
+   `PORT` setzt Railway selbst – die App bindet automatisch daran. Der Nutzer wird
+   beim ersten Start angelegt, falls er noch nicht existiert; danach können die
+   beiden `ADMIN_*`-Variablen wieder entfernt werden.
 4. Push auf `main` → Railway baut und deployt. Migrationen laufen beim Start.
 
 ## Konfiguration
@@ -137,4 +143,5 @@ cd web && pnpm build      # tsc + Router-Codegen + Vite
 | `ConnectionStrings__AppDb` / `DATABASE_URL` | Postgres-Verbindung (Key/Value **oder** URL) | lokale Podman-DB |
 | `RUN_MIGRATIONS_ON_STARTUP` | Migration beim Start ausführen | `true` |
 | `PORT` | HTTP-Port (vom Host gesetzt) | Kestrel-Default |
-| `ASPNETCORE_ENVIRONMENT` | `Development` aktiviert Seed-Daten + `/openapi` | `Production` |
+| `ASPNETCORE_ENVIRONMENT` | `Development` aktiviert `/openapi` | `Production` |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | einziger Nutzer, beim Start angelegt falls fehlend | – (lokal aus `appsettings.Development.json`) |

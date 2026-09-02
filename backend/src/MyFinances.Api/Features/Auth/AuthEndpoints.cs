@@ -7,10 +7,6 @@ using MyFinances.Data.Auth;
 
 namespace MyFinances.Api.Features.Auth;
 
-public record RegisterRequest(
-    [property: Required, EmailAddress] string Email,
-    [property: Required, MinLength(8)] string Password);
-
 public record LoginRequest(
     [property: Required, EmailAddress] string Email,
     [property: Required] string Password);
@@ -23,28 +19,13 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth").WithTags("Auth");
 
-        group.MapPost("/register", Register).WithName("Register");
+        // Single-user app: the account is provisioned from configuration on startup
+        // (see DbSeeder.SeedAdminUserAsync). There is deliberately no public registration.
         group.MapPost("/login", Login).WithName("Login");
         group.MapPost("/logout", Logout).WithName("Logout").RequireAuthorization();
         group.MapGet("/me", Me).WithName("GetCurrentUser").RequireAuthorization();
 
         return group;
-    }
-
-    private static async Task<Results<Ok, ValidationProblem>> Register(
-        RegisterRequest request, UserManager<AppUser> userManager)
-    {
-        if (MiniValidator.TryValidate(request, out var errors) is false)
-            return TypedResults.ValidationProblem(errors);
-
-        var user = new AppUser { UserName = request.Email, Email = request.Email };
-        var result = await userManager.CreateAsync(user, request.Password);
-
-        return result.Succeeded
-            ? TypedResults.Ok()
-            : TypedResults.ValidationProblem(result.Errors
-                .GroupBy(e => e.Code)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
     }
 
     private static async Task<Results<Ok, ValidationProblem>> Login(
