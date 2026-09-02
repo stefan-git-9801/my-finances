@@ -94,9 +94,13 @@ Commit both. CI (`.github/workflows/ci.yml`) fails if they are stale (`git diff 
   (Neon/Railway form) – `DatabaseConnectionString.Normalize` converts it.
 - Config keys: `ConnectionStrings__AppDb` (or `DATABASE_URL`), `RUN_MIGRATIONS_ON_STARTUP`,
   `PORT` (host-provided), `ASPNETCORE_ENVIRONMENT`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
-- Two `dotnet` builds of the API project at once (e.g. an agent building while `dotnet run`
-  is up) corrupt `obj/` – symptom: `Failed to read '…/obj\Debug/…/staticwebassets.development.json'`.
-  Fix: stop all `dotnet` processes, `rm -rf backend/src/*/obj backend/src/*/bin`, rebuild once.
+- Static web assets are **disabled** (`<StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>`):
+  the SPA is a plain Vite build served from the physical `wwwroot/` by `UseStaticFiles` +
+  `MapFallbackToFile`. This also removes the `obj/staticwebassets.development.json` manifest
+  that got corrupted (`obj\Debug/…` with a stray backslash) when the editor's build server
+  raced a terminal `dotnet run`. Don't re-enable it without a reason (RCL, Blazor, bundling).
+- Still, avoid running a backend build while `dotnet run` is up – concurrent MSBuild writes to
+  `obj/` are asking for trouble. If `obj/` looks wrong: `rm -rf backend/src/*/obj backend/src/*/bin`.
 - `RelationalEventId.ConnectionError` is downgraded to Debug in `Program.cs` – `MigrateAsync()`
   logs it at Error on the first start (DB doesn't exist yet); real outages still surface as
   the failing request's exception + 500.
