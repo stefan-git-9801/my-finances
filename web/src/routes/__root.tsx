@@ -18,6 +18,14 @@ import { useCurrentUser, useLogout } from '../lib/auth'
 
 export const Route = createRootRoute({ component: RootLayout })
 
+const navItems = [
+  { to: '/accounts', label: 'Konten' },
+  { to: '/transactions', label: 'Buchungen' },
+  { to: '/transfers', label: 'Umbuchungen' },
+  { to: '/categories', label: 'Kategorien' },
+  { to: '/recurring', label: 'Vorlagen' },
+] as const
+
 const useStyles = makeStyles({
   shell: {
     display: 'flex',
@@ -28,14 +36,18 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: '16px',
     ...shorthands.padding('12px', '24px'),
     ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke2),
     backgroundColor: tokens.colorNeutralBackground2,
+    flexWrap: 'wrap',
   },
   nav: {
     display: 'flex',
     alignItems: 'center',
-    columnGap: '20px',
+    columnGap: '18px',
+    rowGap: '8px',
+    flexWrap: 'wrap',
   },
   link: {
     color: tokens.colorNeutralForeground2,
@@ -48,7 +60,7 @@ const useStyles = makeStyles({
   main: {
     flexGrow: 1,
     width: '100%',
-    maxWidth: '920px',
+    maxWidth: '960px',
     marginInline: 'auto',
     ...shorthands.padding('24px'),
   },
@@ -80,7 +92,7 @@ function RootLayout() {
   }
 
   if (user && onLoginPage) {
-    return <Navigate to="/" />
+    return <Navigate to="/accounts" />
   }
 
   if (!user) {
@@ -93,21 +105,16 @@ function RootLayout() {
       <header className={styles.header}>
         <div className={styles.nav}>
           <Title3>my-finances</Title3>
-          <Link
-            to="/"
-            className={styles.link}
-            activeProps={{ className: `${styles.link} ${styles.activeLink}` }}
-            activeOptions={{ exact: true }}
-          >
-            Konten
-          </Link>
-          <Link
-            to="/transactions"
-            className={styles.link}
-            activeProps={{ className: `${styles.link} ${styles.activeLink}` }}
-          >
-            Buchungen
-          </Link>
+          {navItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={styles.link}
+              activeProps={{ className: `${styles.link} ${styles.activeLink}` }}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
         <div className={styles.nav}>
           <Body1>{user.email}</Body1>

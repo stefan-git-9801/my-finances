@@ -1112,11 +1112,7 @@
             "name": "months",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
+              "type": "integer",
               "format": "int32",
               "default": 12
             }
@@ -1159,11 +1155,7 @@
             "name": "months",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
+              "type": "integer",
               "format": "int32",
               "default": 12
             }
@@ -1263,19 +1255,11 @@
         "type": "object",
         "properties": {
           "year": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "month": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "income": {
@@ -1316,7 +1300,10 @@
             "$ref": "#/components/schemas/CategoryKind"
           },
           "monthlyBudget": {
-            "type": "number",
+            "type": [
+              "null",
+              "number"
+            ],
             "format": "decimal"
           },
           "isDefault": {
@@ -1388,7 +1375,10 @@
           "monthlyBudget": {
             "maximum": 9999999,
             "minimum": 0,
-            "type": "number",
+            "type": [
+              "null",
+              "number"
+            ],
             "format": "decimal"
           }
         }
@@ -1434,11 +1424,7 @@
           "dayOfMonth": {
             "maximum": 31,
             "minimum": 1,
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "startDate": {
@@ -1598,7 +1584,10 @@
             "format": "decimal"
           },
           "savingsRate": {
-            "type": "number",
+            "type": [
+              "null",
+              "number"
+            ],
             "format": "decimal"
           },
           "accounts": {
@@ -1636,11 +1625,9 @@
             ]
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
-              "integer",
-              "string"
+              "integer"
             ],
             "format": "int32"
           },
@@ -1725,11 +1712,7 @@
             ]
           },
           "dayOfMonth": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "startDate": {
@@ -1904,7 +1887,10 @@
           "monthlyBudget": {
             "maximum": 9999999,
             "minimum": 0,
-            "type": "number",
+            "type": [
+              "null",
+              "number"
+            ],
             "format": "decimal"
           }
         }
@@ -1950,11 +1936,7 @@
           "dayOfMonth": {
             "maximum": 31,
             "minimum": 1,
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "startDate": {

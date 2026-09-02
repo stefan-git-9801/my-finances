@@ -7,8 +7,5 @@
 
 export type GetAccountBalanceSeriesParams = {
   accountId: string
-  /**
-   * @pattern ^-?(?:0|[1-9]\d*)$
-   */
-  months?: number | string
+  months?: number
 }

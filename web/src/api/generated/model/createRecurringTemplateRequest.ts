@@ -23,9 +23,8 @@ export interface CreateRecurringTemplateRequest {
   /**
    * @minimum 1
    * @maximum 31
-   * @pattern ^-?(?:0|[1-9]\d*)$
    */
-  dayOfMonth: number | string
+  dayOfMonth: number
   startDate: string
   /** @nullable */
   endDate: string | null

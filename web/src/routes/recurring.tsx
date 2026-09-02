@@ -5,6 +5,7 @@ import {
   Badge,
   Body1,
   Button,
+  Checkbox,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -25,45 +26,37 @@ import {
   Spinner,
   createTableColumn,
   makeStyles,
-  tokens,
 } from '@fluentui/react-components'
 import type { TableColumnDefinition } from '@fluentui/react-components'
 import { useGetAccounts } from '../api/generated/accounts/accounts'
 import { useGetCategories } from '../api/generated/categories/categories'
 import {
-  getGetTransactionsQueryKey,
-  useCreateTransaction,
-  useDeleteTransaction,
-  useGetTransactions,
-  useUpdateTransaction,
-} from '../api/generated/transactions/transactions'
-import { getGetAccountsQueryKey } from '../api/generated/accounts/accounts'
-import type { GetTransactionsParams, TransactionResponse } from '../api/generated/model'
+  getGetRecurringTemplatesQueryKey,
+  useCreateRecurringTemplate,
+  useDeleteRecurringTemplate,
+  useGetRecurringTemplates,
+  useUpdateRecurringTemplate,
+} from '../api/generated/recurring/recurring'
+import { getGetTransactionsQueryKey } from '../api/generated/transactions/transactions'
+import type { RecurringTemplateResponse } from '../api/generated/model'
 import { TransactionType } from '../api/generated/model/transactionType'
 import { transactionTypeLabel } from '../lib/labels'
-import { formatDate, formatEuro, parseAmount } from '../lib/format'
+import { formatEuro, parseAmount } from '../lib/format'
 import { errorMessage } from '../lib/errors'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
-export const Route = createFileRoute('/transactions')({ component: TransactionsPage })
+export const Route = createFileRoute('/recurring')({ component: RecurringPage })
 
 const useStyles = makeStyles({
-  filters: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '12px',
-    marginBottom: '16px',
-  },
-  filter: { minWidth: '150px' },
   form: { display: 'flex', flexDirection: 'column', rowGap: '12px' },
   actions: { display: 'flex', gap: '8px' },
-  income: { color: tokens.colorPaletteGreenForeground1 },
-  expense: { color: tokens.colorPaletteRedForeground1 },
 })
 
-const today = () => new Date().toISOString().slice(0, 10)
-const ALL = '__all__'
+const monthStart = () => {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10)
+}
 
 type FormState = {
   accountId: string
@@ -71,7 +64,10 @@ type FormState = {
   type: TransactionType
   amount: string
   note: string
-  bookedOn: string
+  dayOfMonth: string
+  startDate: string
+  endDate: string
+  isActive: boolean
 }
 
 const emptyForm = (): FormState => ({
@@ -80,35 +76,19 @@ const emptyForm = (): FormState => ({
   type: TransactionType.Expense,
   amount: '',
   note: '',
-  bookedOn: today(),
+  dayOfMonth: '1',
+  startDate: monthStart(),
+  endDate: '',
+  isActive: true,
 })
 
-function TransactionsPage() {
+function RecurringPage() {
   const styles = useStyles()
   const queryClient = useQueryClient()
 
   const accounts = useGetAccounts()
   const categories = useGetCategories()
-
-  const [filters, setFilters] = useState<{
-    from: string
-    to: string
-    accountId: string
-    categoryId: string
-    type: string
-  }>({ from: '', to: '', accountId: ALL, categoryId: ALL, type: ALL })
-
-  const params: GetTransactionsParams = useMemo(() => {
-    const p: GetTransactionsParams = {}
-    if (filters.from) p.from = filters.from
-    if (filters.to) p.to = filters.to
-    if (filters.accountId !== ALL) p.accountId = filters.accountId
-    if (filters.categoryId !== ALL) p.categoryId = filters.categoryId
-    if (filters.type !== ALL) p.type = filters.type as TransactionType
-    return p
-  }, [filters])
-
-  const transactions = useGetTransactions(params)
+  const templates = useGetRecurringTemplates()
 
   const accountName = useMemo(() => {
     const map = new Map<string, string>()
@@ -121,43 +101,47 @@ function TransactionsPage() {
     return map
   }, [categories.data])
 
-  const [editing, setEditing] = useState<TransactionResponse | null>(null)
+  const [editing, setEditing] = useState<RecurringTemplateResponse | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState<FormState>(emptyForm)
-  const [toDelete, setToDelete] = useState<TransactionResponse | null>(null)
+  const [toDelete, setToDelete] = useState<RecurringTemplateResponse | null>(null)
 
   async function invalidate() {
+    await queryClient.invalidateQueries({ queryKey: getGetRecurringTemplatesQueryKey() })
+    // New occurrences may have been materialised on save.
     await queryClient.invalidateQueries({ queryKey: getGetTransactionsQueryKey() })
-    await queryClient.invalidateQueries({ queryKey: getGetAccountsQueryKey() })
   }
 
-  const createTransaction = useCreateTransaction()
-  const updateTransaction = useUpdateTransaction()
-  const deleteTransaction = useDeleteTransaction()
+  const createTemplate = useCreateRecurringTemplate()
+  const updateTemplate = useUpdateRecurringTemplate()
+  const deleteTemplate = useDeleteRecurringTemplate()
 
-  const saving = createTransaction.isPending || updateTransaction.isPending
-  const saveError = createTransaction.error ?? updateTransaction.error
+  const saving = createTemplate.isPending || updateTemplate.isPending
+  const saveError = createTemplate.error ?? updateTemplate.error
 
   function openCreate() {
     setEditing(null)
     setForm(emptyForm())
-    createTransaction.reset()
-    updateTransaction.reset()
+    createTemplate.reset()
+    updateTemplate.reset()
     setDialogOpen(true)
   }
 
-  function openEdit(t: TransactionResponse) {
-    setEditing(t)
+  function openEdit(template: RecurringTemplateResponse) {
+    setEditing(template)
     setForm({
-      accountId: t.accountId,
-      categoryId: t.categoryId,
-      type: t.type,
-      amount: String(t.amount).replace('.', ','),
-      note: t.note ?? '',
-      bookedOn: t.bookedOn.slice(0, 10),
+      accountId: template.accountId,
+      categoryId: template.categoryId,
+      type: template.type,
+      amount: String(template.amount).replace('.', ','),
+      note: template.note ?? '',
+      dayOfMonth: String(template.dayOfMonth),
+      startDate: template.startDate.slice(0, 10),
+      endDate: template.endDate ? template.endDate.slice(0, 10) : '',
+      isActive: template.isActive,
     })
-    createTransaction.reset()
-    updateTransaction.reset()
+    createTemplate.reset()
+    updateTemplate.reset()
     setDialogOpen(true)
   }
 
@@ -169,13 +153,16 @@ function TransactionsPage() {
       type: form.type,
       amount: parseAmount(form.amount),
       note: form.note.trim() === '' ? null : form.note.trim(),
-      bookedOn: form.bookedOn,
+      dayOfMonth: Number(form.dayOfMonth),
+      startDate: form.startDate,
+      endDate: form.endDate === '' ? null : form.endDate,
+      isActive: form.isActive,
     }
     try {
       if (editing) {
-        await updateTransaction.mutateAsync({ id: editing.id, data })
+        await updateTemplate.mutateAsync({ id: editing.id, data })
       } else {
-        await createTransaction.mutateAsync({ data })
+        await createTemplate.mutateAsync({ data })
       }
       await invalidate()
       setDialogOpen(false)
@@ -187,7 +174,7 @@ function TransactionsPage() {
   async function confirmDelete() {
     if (!toDelete) return
     try {
-      await deleteTransaction.mutateAsync({ id: toDelete.id })
+      await deleteTemplate.mutateAsync({ id: toDelete.id })
       await invalidate()
       setToDelete(null)
     } catch {
@@ -195,25 +182,25 @@ function TransactionsPage() {
     }
   }
 
-  const columns: TableColumnDefinition<TransactionResponse>[] = [
+  const columns: TableColumnDefinition<RecurringTemplateResponse>[] = [
     createTableColumn({
-      columnId: 'bookedOn',
-      renderHeaderCell: () => 'Datum',
-      renderCell: (t) => formatDate(t.bookedOn),
+      columnId: 'isActive',
+      renderHeaderCell: () => 'Status',
+      renderCell: (t) => (
+        <Badge appearance="tint" color={t.isActive ? 'success' : 'informative'}>
+          {t.isActive ? 'aktiv' : 'pausiert'}
+        </Badge>
+      ),
     }),
     createTableColumn({
-      columnId: 'category',
-      renderHeaderCell: () => 'Kategorie',
-      renderCell: (t) => (
-        <>
-          {categoryName.get(t.categoryId) ?? '—'}
-          {t.recurringTemplateId && (
-            <Badge appearance="tint" color="brand" style={{ marginLeft: 6 }}>
-              Vorlage
-            </Badge>
-          )}
-        </>
-      ),
+      columnId: 'dayOfMonth',
+      renderHeaderCell: () => 'Tag',
+      renderCell: (t) => `${t.dayOfMonth}.`,
+    }),
+    createTableColumn({
+      columnId: 'type',
+      renderHeaderCell: () => 'Art',
+      renderCell: (t) => transactionTypeLabel[t.type],
     }),
     createTableColumn({
       columnId: 'account',
@@ -221,19 +208,19 @@ function TransactionsPage() {
       renderCell: (t) => accountName.get(t.accountId) ?? '—',
     }),
     createTableColumn({
-      columnId: 'note',
-      renderHeaderCell: () => 'Notiz',
-      renderCell: (t) => t.note ?? '',
+      columnId: 'category',
+      renderHeaderCell: () => 'Kategorie',
+      renderCell: (t) => categoryName.get(t.categoryId) ?? '—',
     }),
     createTableColumn({
       columnId: 'amount',
       renderHeaderCell: () => 'Betrag',
-      renderCell: (t) => (
-        <span className={t.type === TransactionType.Expense ? styles.expense : styles.income}>
-          {t.type === TransactionType.Expense ? '−' : '+'}
-          {formatEuro(t.amount)}
-        </span>
-      ),
+      renderCell: (t) => formatEuro(t.amount),
+    }),
+    createTableColumn({
+      columnId: 'note',
+      renderHeaderCell: () => 'Notiz',
+      renderCell: (t) => t.note ?? '',
     }),
     createTableColumn({
       columnId: 'actions',
@@ -251,98 +238,49 @@ function TransactionsPage() {
     }),
   ]
 
+  const day = Number(form.dayOfMonth)
   const parsedAmount = parseAmount(form.amount)
   const canSubmit =
     form.accountId !== '' &&
     form.categoryId !== '' &&
+    form.startDate !== '' &&
+    Number.isInteger(day) &&
+    day >= 1 &&
+    day <= 31 &&
     !Number.isNaN(parsedAmount) &&
     parsedAmount > 0
 
-  const noPrerequisites = (accounts.data?.length ?? 0) === 0 || (categories.data?.length ?? 0) === 0
+  const disabled = (accounts.data?.length ?? 0) === 0 || (categories.data?.length ?? 0) === 0
 
   return (
     <>
-      <PageHeader title="Buchungen">
-        <Button appearance="primary" onClick={openCreate} disabled={noPrerequisites}>
-          Neue Buchung
+      <PageHeader title="Vorlagen">
+        <Button appearance="primary" onClick={openCreate} disabled={disabled}>
+          Neue Vorlage
         </Button>
       </PageHeader>
 
-      <div className={styles.filters}>
-        <Field label="Von" className={styles.filter}>
-          <Input
-            type="date"
-            value={filters.from}
-            onChange={(_, d) => setFilters((f) => ({ ...f, from: d.value }))}
-          />
-        </Field>
-        <Field label="Bis" className={styles.filter}>
-          <Input
-            type="date"
-            value={filters.to}
-            onChange={(_, d) => setFilters((f) => ({ ...f, to: d.value }))}
-          />
-        </Field>
-        <Field label="Konto" className={styles.filter}>
-          <Dropdown
-            selectedOptions={[filters.accountId]}
-            value={filters.accountId === ALL ? 'Alle' : (accountName.get(filters.accountId) ?? '')}
-            onOptionSelect={(_, d) => setFilters((f) => ({ ...f, accountId: d.optionValue ?? ALL }))}
-          >
-            <Option value={ALL}>Alle</Option>
-            {accounts.data?.map((a) => (
-              <Option key={a.id} value={a.id}>
-                {a.name}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-        <Field label="Kategorie" className={styles.filter}>
-          <Dropdown
-            selectedOptions={[filters.categoryId]}
-            value={filters.categoryId === ALL ? 'Alle' : (categoryName.get(filters.categoryId) ?? '')}
-            onOptionSelect={(_, d) => setFilters((f) => ({ ...f, categoryId: d.optionValue ?? ALL }))}
-          >
-            <Option value={ALL}>Alle</Option>
-            {categories.data?.map((c) => (
-              <Option key={c.id} value={c.id}>
-                {c.name}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-        <Field label="Art" className={styles.filter}>
-          <Dropdown
-            selectedOptions={[filters.type]}
-            value={filters.type === ALL ? 'Alle' : transactionTypeLabel[filters.type as TransactionType]}
-            onOptionSelect={(_, d) => setFilters((f) => ({ ...f, type: d.optionValue ?? ALL }))}
-          >
-            <Option value={ALL}>Alle</Option>
-            {Object.values(TransactionType).map((t) => (
-              <Option key={t} value={t}>
-                {transactionTypeLabel[t]}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-      </div>
+      <Body1 as="p" style={{ marginTop: 0 }}>
+        Wiederkehrende Buchungen (z. B. Miete, Gehalt, Abos) werden monatlich am gewählten Tag
+        automatisch als echte Buchung angelegt.
+      </Body1>
 
-      {transactions.isPending ? (
-        <Spinner label="Buchungen werden geladen …" />
-      ) : transactions.isError ? (
-        <MessageBar intent="error">Buchungen konnten nicht geladen werden.</MessageBar>
-      ) : transactions.data.length === 0 ? (
-        <Body1>Keine Buchungen für die aktuelle Auswahl.</Body1>
+      {templates.isPending ? (
+        <Spinner label="Vorlagen werden geladen …" />
+      ) : templates.isError ? (
+        <MessageBar intent="error">Vorlagen konnten nicht geladen werden.</MessageBar>
+      ) : templates.data.length === 0 ? (
+        <Body1>Noch keine Vorlagen.</Body1>
       ) : (
-        <DataGrid items={transactions.data} columns={columns} getRowId={(t) => t.id}>
+        <DataGrid items={templates.data} columns={columns} getRowId={(t) => t.id}>
           <DataGridHeader>
             <DataGridRow>
               {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
             </DataGridRow>
           </DataGridHeader>
-          <DataGridBody<TransactionResponse>>
+          <DataGridBody<RecurringTemplateResponse>>
             {({ item, rowId }) => (
-              <DataGridRow<TransactionResponse> key={rowId}>
+              <DataGridRow<RecurringTemplateResponse> key={rowId}>
                 {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
               </DataGridRow>
             )}
@@ -354,7 +292,7 @@ function TransactionsPage() {
         <DialogSurface>
           <form onSubmit={onSubmit}>
             <DialogBody>
-              <DialogTitle>{editing ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
+              <DialogTitle>{editing ? 'Vorlage bearbeiten' : 'Neue Vorlage'}</DialogTitle>
               <DialogContent className={styles.form}>
                 <Field label="Art" required>
                   <Dropdown
@@ -376,7 +314,9 @@ function TransactionsPage() {
                     placeholder="Konto wählen"
                     selectedOptions={form.accountId ? [form.accountId] : []}
                     value={accountName.get(form.accountId) ?? ''}
-                    onOptionSelect={(_, d) => setForm((f) => ({ ...f, accountId: d.optionValue ?? '' }))}
+                    onOptionSelect={(_, d) =>
+                      setForm((f) => ({ ...f, accountId: d.optionValue ?? '' }))
+                    }
                   >
                     {accounts.data?.map((a) => (
                       <Option key={a.id} value={a.id}>
@@ -390,7 +330,9 @@ function TransactionsPage() {
                     placeholder="Kategorie wählen"
                     selectedOptions={form.categoryId ? [form.categoryId] : []}
                     value={categoryName.get(form.categoryId) ?? ''}
-                    onOptionSelect={(_, d) => setForm((f) => ({ ...f, categoryId: d.optionValue ?? '' }))}
+                    onOptionSelect={(_, d) =>
+                      setForm((f) => ({ ...f, categoryId: d.optionValue ?? '' }))
+                    }
                   >
                     {categories.data?.map((c) => (
                       <Option key={c.id} value={c.id}>
@@ -403,7 +345,30 @@ function TransactionsPage() {
                   <Input
                     value={form.amount}
                     onChange={(_, d) => setForm((f) => ({ ...f, amount: d.value }))}
-                    placeholder="19,99"
+                    placeholder="800,00"
+                  />
+                </Field>
+                <Field label="Tag im Monat (1–31)" required>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={form.dayOfMonth}
+                    onChange={(_, d) => setForm((f) => ({ ...f, dayOfMonth: d.value }))}
+                  />
+                </Field>
+                <Field label="Startdatum" required>
+                  <Input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(_, d) => setForm((f) => ({ ...f, startDate: d.value }))}
+                  />
+                </Field>
+                <Field label="Enddatum (optional)">
+                  <Input
+                    type="date"
+                    value={form.endDate}
+                    onChange={(_, d) => setForm((f) => ({ ...f, endDate: d.value }))}
                   />
                 </Field>
                 <Field label="Notiz">
@@ -412,13 +377,11 @@ function TransactionsPage() {
                     onChange={(_, d) => setForm((f) => ({ ...f, note: d.value }))}
                   />
                 </Field>
-                <Field label="Datum" required>
-                  <Input
-                    type="date"
-                    value={form.bookedOn}
-                    onChange={(_, d) => setForm((f) => ({ ...f, bookedOn: d.value }))}
-                  />
-                </Field>
+                <Checkbox
+                  label="Aktiv"
+                  checked={form.isActive}
+                  onChange={(_, d) => setForm((f) => ({ ...f, isActive: Boolean(d.checked) }))}
+                />
                 {saveError && (
                   <MessageBar intent="error">{errorMessage(saveError, 'Speichern fehlgeschlagen.')}</MessageBar>
                 )}
@@ -438,15 +401,15 @@ function TransactionsPage() {
 
       <ConfirmDialog
         open={toDelete !== null}
-        title="Buchung löschen"
-        message="Diese Buchung wirklich löschen?"
-        error={deleteTransaction.error ? errorMessage(deleteTransaction.error) : null}
-        pending={deleteTransaction.isPending}
+        title="Vorlage löschen"
+        message="Vorlage löschen? Bereits erzeugte Buchungen bleiben erhalten."
+        error={deleteTemplate.error ? errorMessage(deleteTemplate.error) : null}
+        pending={deleteTemplate.isPending}
         onConfirm={confirmDelete}
         onOpenChange={(open) => {
           if (!open) {
             setToDelete(null)
-            deleteTransaction.reset()
+            deleteTemplate.reset()
           }
         }}
       />

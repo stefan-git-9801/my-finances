@@ -14,8 +14,7 @@ export interface RecurringTemplateResponse {
   amount: number
   /** @nullable */
   note: string | null
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  dayOfMonth: number | string
+  dayOfMonth: number
   startDate: string
   /** @nullable */
   endDate: string | null

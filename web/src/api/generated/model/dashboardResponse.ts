@@ -10,6 +10,7 @@ export interface DashboardResponse {
   netWorth: number
   monthIncome: number
   monthExpense: number
-  savingsRate: number
+  /** @nullable */
+  savingsRate: number | null
   accounts: DashboardAccount[]
 }

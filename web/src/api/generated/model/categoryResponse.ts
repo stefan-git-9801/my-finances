@@ -10,7 +10,8 @@ export interface CategoryResponse {
   id: string
   name: string
   kind: CategoryKind
-  monthlyBudget: number
+  /** @nullable */
+  monthlyBudget: number | null
   isDefault: boolean
   createdAt: string
 }

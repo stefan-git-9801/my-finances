@@ -6,10 +6,8 @@
  */
 
 export interface CashflowPoint {
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  year: number | string
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  month: number | string
+  year: number
+  month: number
   income: number
   expense: number
 }

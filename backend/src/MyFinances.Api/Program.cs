@@ -99,15 +99,24 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi(options =>
 {
-    // .NET emits `decimal` as an anyOf(number, string); collapse it to a plain number
-    // so the generated TypeScript client gets `amount: number` instead of `number | string`.
+    // .NET emits numeric types as `["<type>", "string"]` with a pattern (so big values can be
+    // sent as strings). Collapse that to a plain number/integer so the generated TypeScript
+    // client gets `amount: number` instead of `number | string` – keeping the null branch for
+    // nullable types.
     options.AddSchemaTransformer((schema, context, _) =>
     {
-        var type = context.JsonTypeInfo.Type;
-        if (type == typeof(decimal) || type == typeof(decimal?))
+        var type = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
+        var nullable = context.JsonTypeInfo.Type != type; // was Nullable<T>
+
+        if (type == typeof(decimal))
         {
-            schema.Type = JsonSchemaType.Number;
+            schema.Type = nullable ? JsonSchemaType.Number | JsonSchemaType.Null : JsonSchemaType.Number;
             schema.Format = "decimal";
+            schema.Pattern = null;
+        }
+        else if (type == typeof(int) || type == typeof(long) || type == typeof(short))
+        {
+            schema.Type = nullable ? JsonSchemaType.Integer | JsonSchemaType.Null : JsonSchemaType.Integer;
             schema.Pattern = null;
         }
 

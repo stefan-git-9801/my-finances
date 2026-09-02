@@ -13,6 +13,7 @@ export interface UpdateCategoryRequest {
   /**
    * @minimum 0
    * @maximum 9999999
+   * @nullable
    */
-  monthlyBudget: number
+  monthlyBudget: number | null
 }
