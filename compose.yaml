@@ -30,6 +30,8 @@ services:
       ConnectionStrings__AppDb: "Host=db;Port=5432;Database=${POSTGRES_DB:-myfinances};Username=${POSTGRES_USER:-myfinances};Password=${POSTGRES_PASSWORD:-myfinances}"
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       RUN_MIGRATIONS_ON_STARTUP: "true"
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-dev@my-finances.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-DevPass123}
     ports:
       - "8080:8080"
     depends_on:

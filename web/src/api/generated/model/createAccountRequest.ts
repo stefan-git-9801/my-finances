@@ -4,13 +4,11 @@
  * MyFinances.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { AccountType } from './accountType'
 
 export interface CreateAccountRequest {
   /** @maxLength 100 */
   name: string
-  /**
-   * @minLength 3
-   * @maxLength 3
-   */
-  currency: string
+  type: AccountType
+  startingBalance: number
 }

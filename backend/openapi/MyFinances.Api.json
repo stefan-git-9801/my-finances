@@ -5,39 +5,6 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/api/auth/register": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "operationId": "Register",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/auth/login": {
       "post": {
         "tags": [
@@ -272,6 +239,166 @@
           },
           "404": {
             "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "GetCategories",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "CreateCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories/{id}": {
+      "put": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "UpdateCategory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "DeleteCategory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -284,11 +411,42 @@
         "operationId": "GetTransactions",
         "parameters": [
           {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
             "name": "accountId",
             "in": "query",
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TransactionType"
             }
           }
         ],
@@ -343,6 +501,60 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/transactions/export": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "operationId": "ExportTransactions",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TransactionType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -457,6 +669,517 @@
           }
         }
       }
+    },
+    "/api/transfers": {
+      "get": {
+        "tags": [
+          "Transfers"
+        ],
+        "operationId": "GetTransfers",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Transfers"
+        ],
+        "operationId": "CreateTransfer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transfers/{id}": {
+      "get": {
+        "tags": [
+          "Transfers"
+        ],
+        "operationId": "GetTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Transfers"
+        ],
+        "operationId": "UpdateTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Transfers"
+        ],
+        "operationId": "DeleteTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/recurring-templates": {
+      "get": {
+        "tags": [
+          "Recurring"
+        ],
+        "operationId": "GetRecurringTemplates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecurringTemplateResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Recurring"
+        ],
+        "operationId": "CreateRecurringTemplate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecurringTemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringTemplateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recurring-templates/{id}": {
+      "get": {
+        "tags": [
+          "Recurring"
+        ],
+        "operationId": "GetRecurringTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringTemplateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Recurring"
+        ],
+        "operationId": "UpdateRecurringTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecurringTemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringTemplateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recurring"
+        ],
+        "operationId": "DeleteRecurringTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "operationId": "GetDashboard",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/expenses-by-category": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "GetExpensesByCategory",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryTotal"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/cashflow": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "GetCashflow",
+        "parameters": [
+          {
+            "name": "months",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CashflowPoint"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/account-balances": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "GetAccountBalanceSeries",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "months",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BalancePoint"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -465,7 +1188,9 @@
         "required": [
           "id",
           "name",
-          "currency",
+          "type",
+          "startingBalance",
+          "currentBalance",
           "createdAt"
         ],
         "type": "object",
@@ -477,8 +1202,16 @@
           "name": {
             "type": "string"
           },
-          "currency": {
-            "type": "string"
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "startingBalance": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "currentBalance": {
+            "type": "number",
+            "format": "decimal"
           },
           "createdAt": {
             "type": "string",
@@ -486,10 +1219,128 @@
           }
         }
       },
+      "AccountType": {
+        "enum": [
+          "Checking",
+          "CreditCard",
+          "Savings",
+          "Cash",
+          "Other"
+        ]
+      },
+      "BalancePoint": {
+        "required": [
+          "date",
+          "balance"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "balance": {
+            "type": "number",
+            "format": "decimal"
+          }
+        }
+      },
+      "CashflowPoint": {
+        "required": [
+          "year",
+          "month",
+          "income",
+          "expense"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "month": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "income": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "expense": {
+            "type": "number",
+            "format": "decimal"
+          }
+        }
+      },
+      "CategoryKind": {
+        "enum": [
+          "Expense",
+          "Income"
+        ]
+      },
+      "CategoryResponse": {
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "monthlyBudget",
+          "isDefault",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CategoryKind"
+          },
+          "monthlyBudget": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CategoryTotal": {
+        "required": [
+          "categoryId",
+          "categoryName",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number",
+            "format": "decimal"
+          }
+        }
+      },
       "CreateAccountRequest": {
         "required": [
           "name",
-          "currency"
+          "type",
+          "startingBalance"
         ],
         "type": "object",
         "properties": {
@@ -497,18 +1348,108 @@
             "maxLength": 100,
             "type": "string"
           },
-          "currency": {
-            "maxLength": 3,
-            "minLength": 3,
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "startingBalance": {
+            "type": "number",
+            "format": "decimal"
+          }
+        }
+      },
+      "CreateCategoryRequest": {
+        "required": [
+          "name",
+          "kind",
+          "monthlyBudget"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 100,
             "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CategoryKind"
+          },
+          "monthlyBudget": {
+            "maximum": 9999999,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
+          }
+        }
+      },
+      "CreateRecurringTemplateRequest": {
+        "required": [
+          "accountId",
+          "categoryId",
+          "type",
+          "amount",
+          "note",
+          "dayOfMonth",
+          "startDate",
+          "endDate",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "amount": {
+            "maximum": 999999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "decimal"
+          },
+          "note": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dayOfMonth": {
+            "maximum": 31,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "isActive": {
+            "type": "boolean"
           }
         }
       },
       "CreateTransactionRequest": {
         "required": [
           "accountId",
+          "categoryId",
+          "type",
           "amount",
-          "description",
+          "note",
           "bookedOn"
         ],
         "type": "object",
@@ -517,13 +1458,62 @@
             "type": "string",
             "format": "uuid"
           },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
           "amount": {
+            "maximum": 999999999,
+            "minimum": 0.01,
             "type": "number",
             "format": "decimal"
           },
-          "description": {
+          "note": {
             "maxLength": 200,
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bookedOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "CreateTransferRequest": {
+        "required": [
+          "fromAccountId",
+          "toAccountId",
+          "amount",
+          "note",
+          "bookedOn"
+        ],
+        "type": "object",
+        "properties": {
+          "fromAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "maximum": 999999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "decimal"
+          },
+          "note": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "bookedOn": {
             "type": "string",
@@ -546,6 +1536,79 @@
           }
         }
       },
+      "DashboardAccount": {
+        "required": [
+          "id",
+          "name",
+          "type",
+          "currentBalance"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "currentBalance": {
+            "type": "number",
+            "format": "decimal"
+          }
+        }
+      },
+      "DashboardResponse": {
+        "required": [
+          "netWorth",
+          "monthIncome",
+          "monthExpense",
+          "savingsRate",
+          "accounts"
+        ],
+        "type": "object",
+        "properties": {
+          "netWorth": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "monthIncome": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "monthExpense": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "savingsRate": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardAccount"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "required": [
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
       "HttpValidationProblemDetails": {
         "type": "object",
         "properties": {
@@ -562,11 +1625,9 @@
             ]
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
-              "integer",
-              "string"
+              "integer"
             ],
             "format": "int32"
           },
@@ -608,29 +1669,19 @@
           }
         }
       },
-      "RegisterRequest": {
-        "required": [
-          "email",
-          "password"
-        ],
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string"
-          },
-          "password": {
-            "minLength": 8,
-            "type": "string"
-          }
-        }
-      },
-      "TransactionResponse": {
+      "RecurringTemplateResponse": {
         "required": [
           "id",
           "accountId",
+          "categoryId",
+          "type",
           "amount",
-          "description",
-          "bookedOn",
+          "note",
+          "dayOfMonth",
+          "startDate",
+          "endDate",
+          "lastMaterializedOn",
+          "isActive",
           "createdAt"
         ],
         "type": "object",
@@ -643,12 +1694,149 @@
             "type": "string",
             "format": "uuid"
           },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
           "amount": {
             "type": "number",
             "format": "decimal"
           },
-          "description": {
-            "type": "string"
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dayOfMonth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "lastMaterializedOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TransactionResponse": {
+        "required": [
+          "id",
+          "accountId",
+          "categoryId",
+          "type",
+          "amount",
+          "note",
+          "bookedOn",
+          "recurringTemplateId",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "amount": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bookedOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "recurringTemplateId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TransactionType": {
+        "enum": [
+          "Income",
+          "Expense"
+        ]
+      },
+      "TransferResponse": {
+        "required": [
+          "id",
+          "fromAccountId",
+          "toAccountId",
+          "amount",
+          "note",
+          "bookedOn",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "bookedOn": {
             "type": "string",
@@ -663,7 +1851,8 @@
       "UpdateAccountRequest": {
         "required": [
           "name",
-          "currency"
+          "type",
+          "startingBalance"
         ],
         "type": "object",
         "properties": {
@@ -671,28 +1860,172 @@
             "maxLength": 100,
             "type": "string"
           },
-          "currency": {
-            "maxLength": 3,
-            "minLength": 3,
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "startingBalance": {
+            "type": "number",
+            "format": "decimal"
+          }
+        }
+      },
+      "UpdateCategoryRequest": {
+        "required": [
+          "name",
+          "kind",
+          "monthlyBudget"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 100,
             "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CategoryKind"
+          },
+          "monthlyBudget": {
+            "maximum": 9999999,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
+          }
+        }
+      },
+      "UpdateRecurringTemplateRequest": {
+        "required": [
+          "accountId",
+          "categoryId",
+          "type",
+          "amount",
+          "note",
+          "dayOfMonth",
+          "startDate",
+          "endDate",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "amount": {
+            "maximum": 999999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "decimal"
+          },
+          "note": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dayOfMonth": {
+            "maximum": 31,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "isActive": {
+            "type": "boolean"
           }
         }
       },
       "UpdateTransactionRequest": {
         "required": [
+          "accountId",
+          "categoryId",
+          "type",
           "amount",
-          "description",
+          "note",
           "bookedOn"
         ],
         "type": "object",
         "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
           "amount": {
+            "maximum": 999999999,
+            "minimum": 0.01,
             "type": "number",
             "format": "decimal"
           },
-          "description": {
+          "note": {
             "maxLength": 200,
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bookedOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "UpdateTransferRequest": {
+        "required": [
+          "fromAccountId",
+          "toAccountId",
+          "amount",
+          "note",
+          "bookedOn"
+        ],
+        "type": "object",
+        "properties": {
+          "fromAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "maximum": 999999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "decimal"
+          },
+          "note": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "bookedOn": {
             "type": "string",
@@ -710,7 +2043,22 @@
       "name": "Accounts"
     },
     {
+      "name": "Categories"
+    },
+    {
       "name": "Transactions"
+    },
+    {
+      "name": "Transfers"
+    },
+    {
+      "name": "Recurring"
+    },
+    {
+      "name": "Dashboard"
+    },
+    {
+      "name": "Reports"
     }
   ]
 }

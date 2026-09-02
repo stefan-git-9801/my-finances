@@ -7,17 +7,12 @@ import {
   Card,
   Field,
   Input,
-  Link as FluentLink,
   Title2,
   makeStyles,
   shorthands,
   tokens,
 } from '@fluentui/react-components'
-import {
-  getGetCurrentUserQueryKey,
-  useLogin,
-  useRegister,
-} from '../api/generated/auth/auth'
+import { getGetCurrentUserQueryKey, useLogin } from '../api/generated/auth/auth'
 
 export const Route = createFileRoute('/login')({ component: LoginPage })
 
@@ -50,39 +45,29 @@ function LoginPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const login = useLogin()
-  const register = useRegister()
-  const pending = login.isPending || register.isPending
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
 
     try {
-      if (mode === 'register') {
-        await register.mutateAsync({ data: { email, password } })
-      }
       await login.mutateAsync({ data: { email, password } })
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() })
       await navigate({ to: '/' })
     } catch {
-      setError(
-        mode === 'register'
-          ? 'Registrierung fehlgeschlagen. Passwort mind. 8 Zeichen, E-Mail evtl. schon vergeben.'
-          : 'Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen.',
-      )
+      setError('Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen.')
     }
   }
 
   return (
     <div className={styles.wrap}>
       <Card className={styles.card}>
-        <Title2>{mode === 'login' ? 'Anmelden' : 'Konto erstellen'}</Title2>
+        <Title2>Anmelden</Title2>
 
         <form className={styles.form} onSubmit={onSubmit}>
           <Field label="E-Mail" required>
@@ -97,29 +82,17 @@ function LoginPage() {
             <Input
               type="password"
               value={password}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              autoComplete="current-password"
               onChange={(_, d) => setPassword(d.value)}
             />
           </Field>
 
           {error && <Body1 className={styles.error}>{error}</Body1>}
 
-          <Button appearance="primary" type="submit" disabled={pending}>
-            {mode === 'login' ? 'Anmelden' : 'Registrieren'}
+          <Button appearance="primary" type="submit" disabled={login.isPending}>
+            Anmelden
           </Button>
         </form>
-
-        <Body1>
-          {mode === 'login' ? 'Noch kein Konto? ' : 'Schon registriert? '}
-          <FluentLink
-            onClick={() => {
-              setMode(mode === 'login' ? 'register' : 'login')
-              setError(null)
-            }}
-          >
-            {mode === 'login' ? 'Registrieren' : 'Anmelden'}
-          </FluentLink>
-        </Body1>
       </Card>
     </div>
   )

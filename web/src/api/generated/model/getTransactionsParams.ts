@@ -4,7 +4,12 @@
  * MyFinances.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { TransactionType } from './transactionType'
 
 export type GetTransactionsParams = {
+  from?: string
+  to?: string
   accountId?: string
+  categoryId?: string
+  type?: TransactionType
 }

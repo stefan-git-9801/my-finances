@@ -1,12 +1,21 @@
 using System.Reflection;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using MyFinances.Api.Balances;
 using MyFinances.Api.Data;
 using MyFinances.Api.Features.Accounts;
 using MyFinances.Api.Features.Auth;
+using MyFinances.Api.Features.Categories;
+using MyFinances.Api.Features.Dashboard;
+using MyFinances.Api.Features.Recurring;
+using MyFinances.Api.Features.Reports;
 using MyFinances.Api.Features.Transactions;
+using MyFinances.Api.Features.Transfers;
+using MyFinances.Api.Recurring;
 using MyFinances.Data;
 using MyFinances.Data.Auth;
 
@@ -29,7 +38,20 @@ if (string.IsNullOrWhiteSpace(rawConnectionString))
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(DatabaseConnectionString.Normalize(rawConnectionString)));
+    options
+        .UseNpgsql(DatabaseConnectionString.Normalize(rawConnectionString))
+        // `MigrateAsync()` probes whether the database exists before creating it; on the very
+        // first start that probe fails and EF logs it at Error level. Downgrade that one event
+        // to Debug – a genuine outage still surfaces as the failing query's exception + HTTP 500.
+        .ConfigureWarnings(w => w.Log((RelationalEventId.ConnectionError, LogLevel.Debug))));
+
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<BalanceService>();
+builder.Services.AddScoped<RecurringMaterializer>();
+
+// Serialize enums as strings so the generated TypeScript client gets string unions.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // --- Identity: cookie auth for a same-origin SPA ---
 builder.Services
@@ -83,15 +105,24 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi(options =>
 {
-    // .NET emits `decimal` as an anyOf(number, string); collapse it to a plain number
-    // so the generated TypeScript client gets `amount: number` instead of `number | string`.
+    // .NET emits numeric types as `["<type>", "string"]` with a pattern (so big values can be
+    // sent as strings). Collapse that to a plain number/integer so the generated TypeScript
+    // client gets `amount: number` instead of `number | string` – keeping the null branch for
+    // nullable types.
     options.AddSchemaTransformer((schema, context, _) =>
     {
-        var type = context.JsonTypeInfo.Type;
-        if (type == typeof(decimal) || type == typeof(decimal?))
+        var type = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
+        var nullable = context.JsonTypeInfo.Type != type; // was Nullable<T>
+
+        if (type == typeof(decimal))
         {
-            schema.Type = JsonSchemaType.Number;
+            schema.Type = nullable ? JsonSchemaType.Number | JsonSchemaType.Null : JsonSchemaType.Number;
             schema.Format = "decimal";
+            schema.Pattern = null;
+        }
+        else if (type == typeof(int) || type == typeof(long) || type == typeof(short))
+        {
+            schema.Type = nullable ? JsonSchemaType.Integer | JsonSchemaType.Null : JsonSchemaType.Integer;
             schema.Pattern = null;
         }
 
@@ -112,8 +143,11 @@ if (!isOpenApiDocumentBuild && app.Configuration.GetValue("RUN_MIGRATIONS_ON_STA
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
-    if (app.Environment.IsDevelopment())
-        await DbSeeder.SeedAsync(scope.ServiceProvider);
+    await DbSeeder.SeedCategoriesAsync(scope.ServiceProvider);
+    await DbSeeder.SeedAdminUserAsync(scope.ServiceProvider);
+
+    var materializer = scope.ServiceProvider.GetRequiredService<RecurringMaterializer>();
+    await materializer.MaterializeDueAsync();
 }
 
 app.UseForwardedHeaders();
@@ -129,7 +163,12 @@ app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapAccountsEndpoints();
+app.MapCategoriesEndpoints();
 app.MapTransactionsEndpoints();
+app.MapTransfersEndpoints();
+app.MapRecurringEndpoints();
+app.MapDashboardEndpoints();
+app.MapReportsEndpoints();
 
 // SPA fallback: any non-API, non-file route serves index.html.
 app.MapFallbackToFile("index.html");

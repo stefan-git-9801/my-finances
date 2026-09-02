@@ -4,11 +4,21 @@
  * MyFinances.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { TransactionType } from './transactionType'
 
 export interface CreateTransactionRequest {
   accountId: string
+  categoryId: string
+  type: TransactionType
+  /**
+   * @minimum 0.01
+   * @maximum 999999999
+   */
   amount: number
-  /** @maxLength 200 */
-  description: string
+  /**
+   * @maxLength 200
+   * @nullable
+   */
+  note: string | null
   bookedOn: string
 }

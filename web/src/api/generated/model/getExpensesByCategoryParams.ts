@@ -5,8 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface RegisterRequest {
-  email: string
-  /** @minLength 8 */
-  password: string
+export type GetExpensesByCategoryParams = {
+  from?: string
+  to?: string
 }

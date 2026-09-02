@@ -1,149 +1,164 @@
-import { type FormEvent, useState } from 'react'
+import { useMemo } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   Body1,
-  Button,
   Card,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  DialogTrigger,
-  Field,
-  Input,
-  MessageBar,
   Spinner,
-  Subtitle1,
-  Title2,
+  Subtitle2,
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+  MessageBar,
   makeStyles,
-  shorthands,
   tokens,
 } from '@fluentui/react-components'
-import {
-  getGetAccountsQueryKey,
-  useCreateAccount,
-  useGetAccounts,
-} from '../api/generated/accounts/accounts'
+import { DonutChart, ResponsiveContainer } from '@fluentui/react-charts'
+import { useGetDashboard } from '../api/generated/dashboard/dashboard'
+import { useGetExpensesByCategory } from '../api/generated/reports/reports'
+import { accountTypeLabel } from '../lib/labels'
+import { formatEuro } from '../lib/format'
+import { categoricalColor } from '../lib/chartColors'
+import { useIsDark } from '../theme'
+import { StatTile } from '../components/StatTile'
 
-export const Route = createFileRoute('/')({ component: AccountsPage })
+export const Route = createFileRoute('/')({ component: DashboardPage })
 
 const useStyles = makeStyles({
-  head: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  tiles: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+    gap: '14px',
     marginBottom: '20px',
   },
-  grid: {
+  columns: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: '16px',
+    alignItems: 'start',
   },
-  card: {
-    ...shorthands.padding('20px'),
-    rowGap: '4px',
-  },
-  currency: {
-    color: tokens.colorNeutralForeground3,
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    rowGap: '12px',
-  },
+  panel: { padding: '18px' },
+  panelHead: { marginBottom: '12px', display: 'block' },
+  chartWrap: { width: '100%', minHeight: '260px' },
+  positive: { color: tokens.colorPaletteGreenForeground1 },
+  negative: { color: tokens.colorPaletteRedForeground1 },
 })
 
-function AccountsPage() {
+const pad = (n: number) => String(n).padStart(2, '0')
+function monthBounds() {
+  const now = new Date()
+  const from = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const to = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}-${pad(nextMonth.getDate())}`
+  return { from, to }
+}
+
+const MAX_SLICES = 8
+
+function DashboardPage() {
   const styles = useStyles()
-  const queryClient = useQueryClient()
-  const accounts = useGetAccounts()
+  const isDark = useIsDark()
+  const { from, to } = useMemo(() => monthBounds(), [])
 
-  const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [currency, setCurrency] = useState('EUR')
+  const dashboard = useGetDashboard()
+  const expenses = useGetExpensesByCategory({ from, to })
 
-  const createAccount = useCreateAccount({
-    mutation: {
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: getGetAccountsQueryKey() })
-        setOpen(false)
-        setName('')
-        setCurrency('EUR')
-      },
-    },
-  })
+  const donutData = useMemo(() => {
+    const rows = expenses.data ?? []
+    if (rows.length === 0) return []
+    const head = rows.slice(0, MAX_SLICES)
+    const restTotal = rows.slice(MAX_SLICES).reduce((sum, r) => sum + r.total, 0)
+    const points = head.map((r, i) => ({
+      legend: r.categoryName,
+      data: r.total,
+      color: categoricalColor(i, isDark),
+    }))
+    if (restTotal > 0) {
+      points.push({ legend: 'Weitere', data: restTotal, color: categoricalColor(MAX_SLICES, isDark) })
+    }
+    return points
+  }, [expenses.data, isDark])
 
-  function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    createAccount.mutate({ data: { name, currency } })
+  if (dashboard.isPending) {
+    return <Spinner label="Übersicht wird geladen …" />
   }
+  if (dashboard.isError) {
+    return <MessageBar intent="error">Die Übersicht konnte nicht geladen werden.</MessageBar>
+  }
+
+  const d = dashboard.data
+  const savings = d.savingsRate == null ? '–' : `${Math.round(d.savingsRate * 100)} %`
+  const totalExpenses = donutData.reduce((s, p) => s + p.data, 0)
 
   return (
     <>
-      <div className={styles.head}>
-        <Title2>Konten</Title2>
-        <Dialog open={open} onOpenChange={(_, d) => setOpen(d.open)}>
-          <DialogTrigger disableButtonEnhancement>
-            <Button appearance="primary">Neues Konto</Button>
-          </DialogTrigger>
-          <DialogSurface>
-            <form onSubmit={onSubmit}>
-              <DialogBody>
-                <DialogTitle>Neues Konto</DialogTitle>
-                <DialogContent className={styles.form}>
-                  <Field label="Name" required>
-                    <Input value={name} onChange={(_, d) => setName(d.value)} />
-                  </Field>
-                  <Field label="Währung (3 Buchstaben)" required>
-                    <Input
-                      value={currency}
-                      maxLength={3}
-                      onChange={(_, d) => setCurrency(d.value.toUpperCase())}
-                    />
-                  </Field>
-                  {createAccount.isError && (
-                    <MessageBar intent="error">Konto konnte nicht angelegt werden.</MessageBar>
-                  )}
-                </DialogContent>
-                <DialogActions>
-                  <DialogTrigger disableButtonEnhancement>
-                    <Button appearance="secondary" type="button">
-                      Abbrechen
-                    </Button>
-                  </DialogTrigger>
-                  <Button
-                    appearance="primary"
-                    type="submit"
-                    disabled={createAccount.isPending || name.trim() === '' || currency.length !== 3}
-                  >
-                    Anlegen
-                  </Button>
-                </DialogActions>
-              </DialogBody>
-            </form>
-          </DialogSurface>
-        </Dialog>
+      <div className={styles.tiles}>
+        <StatTile label="Nettovermögen" value={formatEuro(d.netWorth)} />
+        <StatTile
+          label="Einnahmen (Monat)"
+          value={formatEuro(d.monthIncome)}
+          valueColor={tokens.colorPaletteGreenForeground1}
+        />
+        <StatTile
+          label="Ausgaben (Monat)"
+          value={formatEuro(d.monthExpense)}
+          valueColor={tokens.colorPaletteRedForeground1}
+        />
+        <StatTile label="Sparquote (Monat)" value={savings} hint="Anteil der Einnahmen, der übrig bleibt" />
       </div>
 
-      {accounts.isPending ? (
-        <Spinner label="Konten werden geladen …" />
-      ) : accounts.isError ? (
-        <MessageBar intent="error">Konten konnten nicht geladen werden.</MessageBar>
-      ) : accounts.data.length === 0 ? (
-        <Body1>Noch keine Konten. Lege oben dein erstes Konto an.</Body1>
-      ) : (
-        <div className={styles.grid}>
-          {accounts.data.map((account) => (
-            <Card key={account.id} className={styles.card}>
-              <Subtitle1>{account.name}</Subtitle1>
-              <Body1 className={styles.currency}>{account.currency}</Body1>
-            </Card>
-          ))}
-        </div>
-      )}
+      <div className={styles.columns}>
+        <Card className={styles.panel}>
+          <Subtitle2 className={styles.panelHead}>Kontosalden</Subtitle2>
+          {d.accounts.length === 0 ? (
+            <Body1>Noch keine Konten angelegt.</Body1>
+          ) : (
+            <Table size="small">
+              <TableHeader>
+                <TableRow>
+                  <TableHeaderCell>Konto</TableHeaderCell>
+                  <TableHeaderCell>Typ</TableHeaderCell>
+                  <TableHeaderCell>Saldo</TableHeaderCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {d.accounts.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell>{a.name}</TableCell>
+                    <TableCell>{accountTypeLabel[a.type]}</TableCell>
+                    <TableCell className={a.currentBalance < 0 ? styles.negative : styles.positive}>
+                      {formatEuro(a.currentBalance)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Card>
+
+        <Card className={styles.panel}>
+          <Subtitle2 className={styles.panelHead}>Ausgaben nach Kategorie (Monat)</Subtitle2>
+          {expenses.isPending ? (
+            <Spinner label="Wird geladen …" />
+          ) : donutData.length === 0 ? (
+            <Body1>Für diesen Monat sind keine Ausgaben erfasst.</Body1>
+          ) : (
+            <div className={styles.chartWrap}>
+              <ResponsiveContainer width="100%" height={280}>
+                <DonutChart
+                  data={{ chartTitle: 'Ausgaben nach Kategorie', chartData: donutData }}
+                  innerRadius={55}
+                  valueInsideDonut={formatEuro(totalExpenses)}
+                  hideLegend={false}
+                  culture="de-DE"
+                />
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Card>
+      </div>
     </>
   )
 }

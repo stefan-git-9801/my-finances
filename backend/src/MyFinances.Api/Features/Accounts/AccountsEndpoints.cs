@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using MiniValidation;
+using MyFinances.Api.Balances;
+using MyFinances.Api.Common;
 using MyFinances.Data;
 using MyFinances.Data.Entities;
 
@@ -23,23 +25,28 @@ public static class AccountsEndpoints
         return group;
     }
 
-    private static async Task<Ok<IReadOnlyList<AccountResponse>>> GetAll(AppDbContext db, CancellationToken ct)
+    private static async Task<Ok<IReadOnlyList<AccountResponse>>> GetAll(
+        AppDbContext db, BalanceService balances, CancellationToken ct)
     {
-        var accounts = await db.Accounts
-            .OrderBy(a => a.Name)
-            .Select(a => a.ToResponse())
-            .ToListAsync(ct);
+        var accounts = await db.Accounts.OrderBy(a => a.Name).ToListAsync(ct);
+        var byId = await balances.GetBalancesAsync(ct);
 
-        return TypedResults.Ok<IReadOnlyList<AccountResponse>>(accounts);
+        var response = accounts
+            .Select(a => a.ToResponse(byId.GetValueOrDefault(a.Id, a.StartingBalance)))
+            .ToList();
+
+        return TypedResults.Ok<IReadOnlyList<AccountResponse>>(response);
     }
 
     private static async Task<Results<Ok<AccountResponse>, NotFound>> GetById(
-        Guid id, AppDbContext db, CancellationToken ct)
+        Guid id, AppDbContext db, BalanceService balances, CancellationToken ct)
     {
         var account = await db.Accounts.FirstOrDefaultAsync(a => a.Id == id, ct);
-        return account is null
-            ? TypedResults.NotFound()
-            : TypedResults.Ok(account.ToResponse());
+        if (account is null)
+            return TypedResults.NotFound();
+
+        var byId = await balances.GetBalancesAsync(ct);
+        return TypedResults.Ok(account.ToResponse(byId.GetValueOrDefault(id, account.StartingBalance)));
     }
 
     private static async Task<Results<Created<AccountResponse>, ValidationProblem>> Create(
@@ -51,19 +58,20 @@ public static class AccountsEndpoints
         var account = new Account
         {
             Id = Guid.NewGuid(),
-            Name = request.Name,
-            Currency = request.Currency.ToUpperInvariant(),
+            Name = request.Name.Trim(),
+            Type = request.Type,
+            StartingBalance = request.StartingBalance,
             CreatedAt = DateTimeOffset.UtcNow,
         };
 
         db.Accounts.Add(account);
         await db.SaveChangesAsync(ct);
 
-        return TypedResults.Created($"/api/accounts/{account.Id}", account.ToResponse());
+        return TypedResults.Created($"/api/accounts/{account.Id}", account.ToResponse(account.StartingBalance));
     }
 
     private static async Task<Results<Ok<AccountResponse>, NotFound, ValidationProblem>> Update(
-        Guid id, UpdateAccountRequest request, AppDbContext db, CancellationToken ct)
+        Guid id, UpdateAccountRequest request, AppDbContext db, BalanceService balances, CancellationToken ct)
     {
         if (MiniValidator.TryValidate(request, out var errors) is false)
             return TypedResults.ValidationProblem(errors);
@@ -72,18 +80,30 @@ public static class AccountsEndpoints
         if (account is null)
             return TypedResults.NotFound();
 
-        account.Name = request.Name;
-        account.Currency = request.Currency.ToUpperInvariant();
+        account.Name = request.Name.Trim();
+        account.Type = request.Type;
+        account.StartingBalance = request.StartingBalance;
         await db.SaveChangesAsync(ct);
 
-        return TypedResults.Ok(account.ToResponse());
+        var byId = await balances.GetBalancesAsync(ct);
+        return TypedResults.Ok(account.ToResponse(byId.GetValueOrDefault(id, account.StartingBalance)));
     }
 
-    private static async Task<Results<NoContent, NotFound>> Delete(Guid id, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, NotFound, Conflict<ErrorResponse>>> Delete(
+        Guid id, AppDbContext db, CancellationToken ct)
     {
         var account = await db.Accounts.FirstOrDefaultAsync(a => a.Id == id, ct);
         if (account is null)
             return TypedResults.NotFound();
+
+        var referenced =
+            await db.Transactions.AnyAsync(t => t.AccountId == id, ct) ||
+            await db.Transfers.AnyAsync(t => t.FromAccountId == id || t.ToAccountId == id, ct) ||
+            await db.RecurringTemplates.AnyAsync(r => r.AccountId == id, ct);
+
+        if (referenced)
+            return TypedResults.Conflict(new ErrorResponse(
+                "Das Konto hat noch Buchungen, Umbuchungen oder Vorlagen und kann nicht gelöscht werden."));
 
         db.Accounts.Remove(account);
         await db.SaveChangesAsync(ct);

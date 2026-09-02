@@ -6,6 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>MyFinances.Api</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- The SPA is built by Vite and served from the physical wwwroot/ (copied in by the
+         Dockerfile). We use no RCLs, Blazor or bundling, so the static-web-assets manifest
+         machinery is pure overhead – and its dev manifest under obj/ is what breaks when two
+         builds race. UseStaticFiles/MapFallbackToFile serve wwwroot/ without it. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
   <!-- Emit the OpenAPI document at build time so Orval always has a fresh spec.

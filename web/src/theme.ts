@@ -3,8 +3,8 @@ import { webDarkTheme, webLightTheme } from '@fluentui/react-components'
 
 const query = '(prefers-color-scheme: dark)'
 
-/** Follows the OS light/dark preference and updates live when it changes. */
-export function useAppTheme() {
+/** Whether the OS is currently in dark mode; updates live when it changes. */
+export function useIsDark() {
   const [dark, setDark] = useState(() => window.matchMedia?.(query).matches ?? false)
 
   useEffect(() => {
@@ -14,5 +14,10 @@ export function useAppTheme() {
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  return dark ? webDarkTheme : webLightTheme
+  return dark
+}
+
+/** Follows the OS light/dark preference and updates live when it changes. */
+export function useAppTheme() {
+  return useIsDark() ? webDarkTheme : webLightTheme
 }
