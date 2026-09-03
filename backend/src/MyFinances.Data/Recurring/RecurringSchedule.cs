@@ -50,5 +50,38 @@ public static class RecurringSchedule
         }
     }
 
+    /// <summary>
+    /// The single booking date a template would produce in the given calendar month, or <c>null</c>
+    /// if the template does not apply that month. Start is matched by month (the day component of
+    /// <paramref name="startDate"/> is ignored), end by exact date, and the day is clamped to the
+    /// month's length – the same rules <see cref="DueBookingDates"/> uses, so the dashboard's
+    /// "planned" figure lines up with what the materialiser will actually book.
+    /// </summary>
+    /// <param name="startDate">First month the template applies (day component ignored).</param>
+    /// <param name="endDate">Optional last day the template applies.</param>
+    /// <param name="dayOfMonth">Desired day of month (1–31), clamped to the month's length.</param>
+    /// <param name="year">Calendar year of the month to look at.</param>
+    /// <param name="month">Calendar month (1–12) to look at.</param>
+    public static DateOnly? OccurrenceInMonth(
+        DateOnly startDate, DateOnly? endDate, int dayOfMonth, int year, int month)
+    {
+        if (dayOfMonth is < 1 or > 31)
+            return null;
+
+        var target = new DateOnly(year, month, 1);
+        if (target < FirstOfMonth(startDate))
+            return null;
+        if (endDate is { } end && target > FirstOfMonth(end))
+            return null;
+
+        var day = Math.Min(dayOfMonth, DateTime.DaysInMonth(year, month));
+        var occurrence = new DateOnly(year, month, day);
+
+        if (endDate is { } e && occurrence > e)
+            return null;
+
+        return occurrence;
+    }
+
     private static DateOnly FirstOfMonth(DateOnly date) => new(date.Year, date.Month, 1);
 }

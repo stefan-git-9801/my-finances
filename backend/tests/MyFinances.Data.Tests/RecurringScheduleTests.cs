@@ -72,4 +72,46 @@ public class RecurringScheduleTests
         Assert.Empty(RecurringSchedule.DueBookingDates(D(2026, 1, 1), null, 0, null, D(2026, 6, 1)));
         Assert.Empty(RecurringSchedule.DueBookingDates(D(2026, 1, 1), null, 32, null, D(2026, 6, 1)));
     }
+
+    [Fact]
+    public void OccurrenceInMonth_ReturnsClampedDayWithinWindow()
+    {
+        Assert.Equal(D(2026, 3, 15),
+            RecurringSchedule.OccurrenceInMonth(D(2026, 1, 15), null, 15, 2026, 3));
+        Assert.Equal(D(2026, 2, 28),
+            RecurringSchedule.OccurrenceInMonth(D(2026, 1, 31), null, 31, 2026, 2));
+    }
+
+    [Fact]
+    public void OccurrenceInMonth_NullOutsideStartEndWindow()
+    {
+        Assert.Null(RecurringSchedule.OccurrenceInMonth(D(2026, 6, 1), null, 10, 2026, 3));
+        Assert.Null(RecurringSchedule.OccurrenceInMonth(D(2026, 1, 10), D(2026, 2, 28), 10, 2026, 3));
+    }
+
+    [Fact]
+    public void OccurrenceInMonth_MatchesStartByMonthLikeDueBookingDates()
+    {
+        // start day (20th) is after the template day (10th) in the very first month:
+        // DueBookingDates ignores the day component of StartDate, so this must too.
+        Assert.Equal(D(2026, 1, 10),
+            RecurringSchedule.OccurrenceInMonth(D(2026, 1, 20), null, 10, 2026, 1));
+    }
+
+    [Fact]
+    public void OccurrenceInMonth_RespectsDayLevelEnd()
+    {
+        // ends on the 5th – the 10th of that same month is after the end
+        Assert.Null(RecurringSchedule.OccurrenceInMonth(D(2026, 1, 1), D(2026, 3, 5), 10, 2026, 3));
+        // ends on the 15th – the 10th still falls within the window
+        Assert.Equal(D(2026, 3, 10),
+            RecurringSchedule.OccurrenceInMonth(D(2026, 1, 1), D(2026, 3, 15), 10, 2026, 3));
+    }
+
+    [Fact]
+    public void OccurrenceInMonth_RejectsInvalidDayOfMonth()
+    {
+        Assert.Null(RecurringSchedule.OccurrenceInMonth(D(2026, 1, 1), null, 0, 2026, 1));
+        Assert.Null(RecurringSchedule.OccurrenceInMonth(D(2026, 1, 1), null, 32, 2026, 1));
+    }
 }

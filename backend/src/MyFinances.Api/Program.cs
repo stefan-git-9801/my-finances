@@ -13,6 +13,7 @@ using MyFinances.Api.Features.Categories;
 using MyFinances.Api.Features.Dashboard;
 using MyFinances.Api.Features.Recurring;
 using MyFinances.Api.Features.Reports;
+using MyFinances.Api.Features.SavingsGoals;
 using MyFinances.Api.Features.Transactions;
 using MyFinances.Api.Features.Transfers;
 using MyFinances.Api.Recurring;
@@ -191,6 +192,7 @@ app.MapTransfersEndpoints();
 app.MapRecurringEndpoints();
 app.MapDashboardEndpoints();
 app.MapReportsEndpoints();
+app.MapSavingsGoalsEndpoints();
 
 // SPA fallback: any non-API, non-file route serves index.html.
 app.MapFallbackToFile("index.html");

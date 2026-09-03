@@ -12,7 +12,8 @@ Neon) abgebildet sind.
 > Detailkonventionen stehen in [`AGENTS.md`](../AGENTS.md), nicht hier.
 
 Stand: 2026-09-03 · Umgesetzt: Phasen 1–3 (Datenmodell/API, Kern-UI, Dashboard &
-Auswertungen). Offen: Phase 4 (CSV-Export-Button in der UI, PWA).
+Auswertungen) sowie monatliches Sparziel mit Tagesbudget-Berechnung. Offen:
+Phase 4 (CSV-Export-Button in der UI, PWA).
 
 ---
 
@@ -74,6 +75,7 @@ Mac. Betrieb möglichst kostenlos innerhalb der Free-Tiers von Railway und Neon.
 | 6.4 | Optionales Monatsbudget pro Kategorie. | ✅ Feld `MonthlyBudget` (ein Wert, gilt für alle Monate) – Erfassung im UI vorhanden; Budget-Auswertung (Ist vs. Soll) noch offen |
 | 6.5 | Kategorie mit Buchungen/Vorlagen kann nicht gelöscht werden. | ✅ HTTP 409 |
 | 6.6 | Kategoriename ist eindeutig. | ✅ HTTP 400 bei Dublette |
+| 6.7 | Monatliches Sparziel je Kalendermonat definierbar (ein Betrag pro Jahr/Monat). | ✅ Entität `MonthlySavingsGoal`, `GET/PUT /api/savings-goals/{year}/{month}`; Bedienung auf dem Dashboard (laufender Monat). Betrag 0/leer = kein Sparziel |
 
 ## 7. Wiederkehrende Buchungen
 
@@ -98,6 +100,7 @@ Mac. Betrieb möglichst kostenlos innerhalb der Free-Tiers von Railway und Neon.
 | 8.5 | Einnahmen- und Ausgaben-Verlauf über die Zeit. | ✅ gruppiertes Balkendiagramm, 12 Monate (`GET /api/reports/cashflow`) |
 | 8.6 | Kontostand-Verlauf je Konto. | ✅ Linienchart mit Konto-Auswahl (`GET /api/reports/account-balances`) |
 | 8.7 | Diagramme in Hell und Dunkel. | ✅ `@fluentui/react-charts`, Farben aus [`lib/chartColors.ts`](../web/src/lib/chartColors.ts) (validierte kategoriale Palette; Einnahmen = grün, Ausgaben = rot) |
+| 8.8 | Dashboard-Tagesbudget: „frei verfügbar" = (Einnahmen − Ausgaben des Monats, **je inkl. der für den Restmonat fälligen aktiven Vorlagen**) − Sparziel des Monats; „täglich verfügbar" = frei verfügbar / verbleibende Tage (**ab morgen** bis Monatsende; am Monatsletzten „–"). | ✅ Feld `dailyBudget` in `GET /api/dashboard` |
 
 ## 9. CSV-Export
 
@@ -145,8 +148,9 @@ URL-Pfade englisch, sichtbare Beschriftungen deutsch.
 | Buchungen | `GET/POST /api/transactions`, `GET/PUT/DELETE /api/transactions/{id}`, `GET /api/transactions/export` |
 | Umbuchungen | `GET/POST /api/transfers`, `GET/PUT/DELETE /api/transfers/{id}` |
 | Vorlagen | `GET/POST /api/recurring-templates`, `GET/PUT/DELETE /api/recurring-templates/{id}` |
-| Dashboard | `GET /api/dashboard` |
+| Dashboard | `GET /api/dashboard` (inkl. `dailyBudget`: Sparziel, geplante Vorlagen, frei verfügbar, verbleibende Tage, Tagesbetrag) |
 | Auswertungen | `GET /api/reports/expenses-by-category`, `GET /api/reports/cashflow`, `GET /api/reports/account-balances` |
+| Sparziele | `GET/PUT /api/savings-goals/{year}/{month}` |
 
 Der TypeScript-Client wird mit Orval aus `backend/openapi/MyFinances.Api.json`
 generiert – nach jeder API-Änderung neu erzeugen und einchecken.
@@ -161,11 +165,12 @@ Transaction(Id, AccountId→Account, CategoryId→Category, Type, Amount>0, Note
 Transfer(Id, FromAccountId→Account, ToAccountId→Account, Amount>0, Note?, BookedOn, CreatedAt)
 RecurringTemplate(Id, AccountId→Account, CategoryId→Category, Type, Amount>0, Note?,
                   DayOfMonth 1–31, StartDate, EndDate?, LastMaterializedOn?, IsActive, CreatedAt)
+MonthlySavingsGoal(Id, Year, Month 1–12, Amount≥0, CreatedAt) – unique (Year, Month), keine FKs
 ```
 
 Löschverhalten: `Transaction`/`Transfer`/`RecurringTemplate` → `Account`/`Category`
 mit **Restrict** (blockiert, HTTP 409); `Transaction` → `RecurringTemplate` mit
-**SetNull**.
+**SetNull**. `MonthlySavingsGoal` steht für sich (keine Beziehungen).
 
 ## 14. Umsetzungsentscheidungen
 
@@ -181,6 +186,8 @@ bzw. konkretisiert – jeweils mit dem Nutzer abgestimmt:
 | Buchungsbetrag | `Type`-Enum (Einnahme/Ausgabe) + **positiver** Betrag statt signiertem Betrag; Kategorie ist Pflicht. |
 | Kategorie löschen | Blockiert (HTTP 409), wenn Buchungen oder Vorlagen die Kategorie referenzieren. |
 | Monatsbudget | Einzelnes Feld an `Category` (gilt für alle Monate), keine Budget-je-Monat-Tabelle. |
+| Sparziel | Eigene Tabelle `MonthlySavingsGoal` je (Jahr, Monat) – bewusst abweichend vom Kategorie-Monatsbudget, weil der Nutzer monatsgenaue Sparziele will. Betrag 0 ⇒ Zeile wird gelöscht (kein separater DELETE-Endpunkt). |
+| Tagesbudget-Basis | „frei verfügbar" = verbuchte Einnahmen − verbuchte Ausgaben des Monats, **zzgl. der für den Restmonat (Fälligkeit > heute) noch fälligen aktiven Vorlagen**, minus Sparziel. Verbleibende Tage zählen **ab morgen** (heute gilt als abgeschlossen). Reiner Helper `RecurringSchedule.OccurrenceInMonth` + Tests. |
 | CSV-Export | Server-Endpunkt (`text/csv`), nicht clientseitig erzeugt. |
 | Migrationen | Eine frische `InitialCreate`; die generischen `Account`/`Transaction`-Entitäten des Ausgangsstands wurden gelöscht. |
 | Währung | Kein Währungsfeld – ausschließlich Euro. |
@@ -192,5 +199,8 @@ bzw. konkretisiert – jeweils mit dem Nutzer abgestimmt:
 - **Phase 4**: CSV-Export-Button samt Filterdialog in der Buchungsliste; PWA
   (`vite-plugin-pwa`, Manifest, Icons, `apple-mobile-web-app-*`-Meta).
 - Budget-Auswertung: Ist-Ausgaben je Kategorie gegen `MonthlyBudget` (Fortschritt,
-  Warnung bei Überschreitung).
+  Warnung bei Überschreitung). (Das monatliche Sparziel / Tagesbudget aus 6.7 / 8.8
+  ist davon unabhängig und bereits umgesetzt.)
+- Sparziel/Tagesbudget: bisher nur für den laufenden Monat im UI bedienbar; andere
+  Monate sind über die API erreichbar, aber ohne Oberfläche.
 - Kontostand-Verlauf ggf. als Mehrlinien-Diagramm über alle Konten.
