@@ -9,6 +9,9 @@ Datenbank bei Neon.
 Die API liefert im Betrieb sowohl `/api/*` als auch das gebaute Frontend aus – ein
 Deployment, ein Origin, kein CORS.
 
+Die fachlichen Anforderungen und ihr Umsetzungsstand stehen in
+[`docs/anforderungen.md`](docs/anforderungen.md) (wird bei Erweiterungen aktualisiert).
+
 ## Projektstruktur
 
 ```
@@ -25,6 +28,7 @@ web/
   src/api/mutator.ts               Axios-Instanz (withCredentials)
   src/routes/                      TanStack Router (file-based)
 compose.yaml                       Podman: db + adminer + api
+docs/anforderungen.md              lebendes Anforderungsdokument
 ```
 
 ## Voraussetzungen
@@ -115,6 +119,14 @@ cd web && pnpm build      # tsc + Router-Codegen + Vite
 1. Projekt auf https://neon.tech anlegen.
 2. Connection-String kopieren (Form `postgresql://user:pass@host/db?sslmode=require`).
    Die App wandelt dieses URL-Format automatisch ins Npgsql-Format um.
+
+> **Schema-Reset nötig, wenn die Neon-DB schon ein älteres Schema hat.**
+> Beim Start wendet die App ausstehende EF-Migrationen an. Enthält die DB bereits
+> Tabellen aus einer früheren `InitialCreate`-Migration, schlägt das mit
+> `relation "…" already exists` fehl und der Container crasht (im Log:
+> *„Startup database work failed …"*). Dann im Neon-SQL-Editor einmal
+> `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` ausführen und neu deployen –
+> es gibt keinen erhaltenswerten Datenbestand.
 
 ### App – Railway
 

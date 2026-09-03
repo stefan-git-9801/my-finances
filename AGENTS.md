@@ -22,7 +22,9 @@ serves both `/api/*` and the built React SPA from `wwwroot/` (same origin, no CO
   `Category` (kind + optional monthly budget), `Transaction` (income/expense, positive amount,
   required category, optional note), `Transfer` (between two own accounts – counts towards
   balances, excluded from income/expense reports), `RecurringTemplate` (monthly, fixed day).
-  EUR only. Deutsche UI throughout.
+  EUR only. Deutsche UI throughout. Full spec: [`docs/anforderungen.md`](docs/anforderungen.md)
+  – a living requirements doc. **Update it in the same PR as any user-facing feature change**
+  (the requirement, its status, or a decision under "Umsetzungsentscheidungen").
 - **DB**: PostgreSQL. Local = Podman container. Prod = Neon (free tier).
 - **Hosting**: Railway, builds `backend/Dockerfile` (config in `railway.json`).
 
