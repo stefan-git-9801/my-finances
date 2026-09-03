@@ -9,6 +9,9 @@ Datenbank bei Neon.
 Die API liefert im Betrieb sowohl `/api/*` als auch das gebaute Frontend aus – ein
 Deployment, ein Origin, kein CORS.
 
+Die fachlichen Anforderungen und ihr Umsetzungsstand stehen in
+[`docs/anforderungen.md`](docs/anforderungen.md) (wird bei Erweiterungen aktualisiert).
+
 ## Projektstruktur
 
 ```
@@ -25,6 +28,7 @@ web/
   src/api/mutator.ts               Axios-Instanz (withCredentials)
   src/routes/                      TanStack Router (file-based)
 compose.yaml                       Podman: db + adminer + api
+docs/anforderungen.md              lebendes Anforderungsdokument
 ```
 
 ## Voraussetzungen
