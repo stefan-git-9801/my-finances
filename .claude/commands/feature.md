@@ -27,6 +27,9 @@ Gib das Ergebnis als kurze, strukturierte Analyse aus. **Stopp** – warte auf �
 
 ## Phase 2 – Umsetzung
 
+- **Zuerst:** einen neuen Branch von `main` anlegen
+  (`git checkout main && git pull && git checkout -b <typ>/<kurzname>`). Nie direkt
+  auf `main` oder einem bestehenden Feature-Branch entwickeln.
 - Setze die in Phase 1 abgestimmte Lösung um. Halte dich an die Konventionen in
   `AGENTS.md` (Minimal API, `TypedResults`, DTO-Records, MiniValidation, Fluent v9,
   `chartColors.ts`, kein Editieren von generiertem Code).
