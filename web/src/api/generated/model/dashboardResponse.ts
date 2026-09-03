@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { DashboardAccount } from './dashboardAccount'
+import type { DashboardDailyBudget } from './dashboardDailyBudget'
 
 export interface DashboardResponse {
   netWorth: number
@@ -12,5 +13,6 @@ export interface DashboardResponse {
   monthExpense: number
   /** @nullable */
   savingsRate: number | null
+  dailyBudget: DashboardDailyBudget
   accounts: DashboardAccount[]
 }

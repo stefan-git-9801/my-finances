@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Transfer> Transfers => Set<Transfer>();
     public DbSet<RecurringTemplate> RecurringTemplates => Set<RecurringTemplate>();
+    public DbSet<MonthlySavingsGoal> MonthlySavingsGoals => Set<MonthlySavingsGoal>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -78,6 +79,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasIndex(t => t.FromAccountId);
             e.HasIndex(t => t.ToAccountId);
             e.HasIndex(t => t.BookedOn);
+        });
+
+        builder.Entity<MonthlySavingsGoal>(e =>
+        {
+            e.Property(g => g.Amount).HasPrecision(18, 2);
+            e.HasIndex(g => new { g.Year, g.Month }).IsUnique();
         });
 
         builder.Entity<RecurringTemplate>(e =>

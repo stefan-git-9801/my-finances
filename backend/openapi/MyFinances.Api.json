@@ -1180,6 +1180,114 @@
           }
         }
       }
+    },
+    "/api/savings-goals/{year}/{month}": {
+      "get": {
+        "tags": [
+          "SavingsGoals"
+        ],
+        "operationId": "GetSavingsGoal",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavingsGoalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "SavingsGoals"
+        ],
+        "operationId": "UpsertSavingsGoal",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertSavingsGoalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavingsGoalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1561,12 +1669,56 @@
           }
         }
       },
+      "DashboardDailyBudget": {
+        "required": [
+          "savingsGoal",
+          "plannedIncome",
+          "plannedExpense",
+          "available",
+          "daysRemaining",
+          "perDay"
+        ],
+        "type": "object",
+        "properties": {
+          "savingsGoal": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
+          },
+          "plannedIncome": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "plannedExpense": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "available": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "daysRemaining": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "perDay": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
+          }
+        }
+      },
       "DashboardResponse": {
         "required": [
           "netWorth",
           "monthIncome",
           "monthExpense",
           "savingsRate",
+          "dailyBudget",
           "accounts"
         ],
         "type": "object",
@@ -1589,6 +1741,9 @@
               "number"
             ],
             "format": "decimal"
+          },
+          "dailyBudget": {
+            "$ref": "#/components/schemas/DashboardDailyBudget"
           },
           "accounts": {
             "type": "array",
@@ -1739,6 +1894,31 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "SavingsGoalResponse": {
+        "required": [
+          "year",
+          "month",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "month": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "amount": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
           }
         }
       },
@@ -2032,6 +2212,20 @@
             "format": "date"
           }
         }
+      },
+      "UpsertSavingsGoalRequest": {
+        "required": [
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "maximum": 9999999,
+            "minimum": 0,
+            "type": "number",
+            "format": "decimal"
+          }
+        }
       }
     }
   },
@@ -2059,6 +2253,9 @@
     },
     {
       "name": "Reports"
+    },
+    {
+      "name": "SavingsGoals"
     }
   ]
 }
