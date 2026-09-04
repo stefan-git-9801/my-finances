@@ -2,13 +2,17 @@ import { useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import {
   Body1,
+  Caption1,
   Card,
   Dropdown,
   Field,
   Option,
+  ProgressBar,
   Spinner,
   Subtitle2,
+  Text,
   makeStyles,
+  tokens,
 } from '@fluentui/react-components'
 import {
   DonutChart,
@@ -19,10 +23,11 @@ import {
 import { useGetAccounts } from '../api/generated/accounts/accounts'
 import {
   useGetAccountBalanceSeries,
+  useGetBudgetReport,
   useGetCashflow,
   useGetExpensesByCategory,
 } from '../api/generated/reports/reports'
-import { formatEuro } from '../lib/format'
+import { formatEuro, formatPercent } from '../lib/format'
 import { categoricalColor, expenseColor, incomeColor } from '../lib/chartColors'
 import { useIsDark } from '../theme'
 import { PageHeader } from '../components/PageHeader'
@@ -38,6 +43,18 @@ const useStyles = makeStyles({
   },
   panel: { padding: '18px', display: 'flex', flexDirection: 'column', rowGap: '12px' },
   chartWrap: { width: '100%', minHeight: '300px' },
+  budgetList: { display: 'flex', flexDirection: 'column', rowGap: '14px' },
+  budgetRow: { display: 'flex', flexDirection: 'column', rowGap: '4px' },
+  budgetHead: { display: 'flex', justifyContent: 'space-between', columnGap: '12px' },
+  budgetFoot: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    columnGap: '12px',
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    paddingTop: '10px',
+  },
+  muted: { color: tokens.colorNeutralForeground3 },
+  over: { color: tokens.colorPaletteRedForeground1 },
 })
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -68,6 +85,116 @@ function periodRange(key: PeriodKey): { from?: string; to?: string } {
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 const MAX_SLICES = 8
+
+type BudgetColor = 'success' | 'warning' | 'error'
+
+function budgetColor(ratio: number): BudgetColor {
+  if (ratio > 1) return 'error'
+  if (ratio >= 0.8) return 'warning'
+  return 'success'
+}
+
+function PeriodField({
+  value,
+  onChange,
+}: {
+  value: PeriodKey
+  onChange: (key: PeriodKey) => void
+}) {
+  return (
+    <Field label="Zeitraum">
+      <Dropdown
+        selectedOptions={[value]}
+        value={periodOptions.find((o) => o.key === value)?.label ?? ''}
+        onOptionSelect={(_, d) => onChange((d.optionValue as PeriodKey | undefined) ?? value)}
+      >
+        {periodOptions.map((o) => (
+          <Option key={o.key} value={o.key}>
+            {o.label}
+          </Option>
+        ))}
+      </Dropdown>
+    </Field>
+  )
+}
+
+function BudgetsCard() {
+  const styles = useStyles()
+  const [period, setPeriod] = useState<PeriodKey>('month')
+  const range = useMemo(() => periodRange(period), [period])
+  const report = useGetBudgetReport(range)
+
+  const months = report.data?.months ?? 1
+  const rows = useMemo(() => {
+    // The API already normalises monthlyBudget to null for a 0/unset budget.
+    return (report.data?.lines ?? []).map((l) => {
+      const budget = l.monthlyBudget != null ? l.monthlyBudget * months : null
+      const ratio = budget != null ? l.actual / budget : null
+      return { ...l, budget, ratio }
+    })
+  }, [report.data, months])
+
+  const totals = useMemo(() => {
+    const budgeted = rows.filter((r) => r.budget != null)
+    const budget = budgeted.reduce((s, r) => s + (r.budget ?? 0), 0)
+    const actual = budgeted.reduce((s, r) => s + r.actual, 0)
+    return { budget, actual, ratio: budget > 0 ? actual / budget : null }
+  }, [rows])
+
+  return (
+    <Card className={styles.panel}>
+      <Subtitle2>Budgets</Subtitle2>
+      <PeriodField value={period} onChange={setPeriod} />
+      {months > 1 && (
+        <Caption1 className={styles.muted}>
+          Monatsbudget × {months} Monate für den gewählten Zeitraum
+        </Caption1>
+      )}
+      {report.isPending ? (
+        <Spinner label="Wird geladen …" />
+      ) : rows.length === 0 ? (
+        <Body1>Keine Ausgaben-Kategorien mit Budget oder Ausgaben im Zeitraum.</Body1>
+      ) : (
+        <div className={styles.budgetList}>
+          {rows.map((r) => (
+            <div key={r.categoryId} className={styles.budgetRow}>
+              <div className={styles.budgetHead}>
+                <Text weight="semibold">{r.categoryName}</Text>
+                {r.budget != null && r.ratio != null ? (
+                  <Text className={r.ratio > 1 ? styles.over : undefined}>
+                    {formatEuro(r.actual)} von {formatEuro(r.budget)} · {formatPercent(r.ratio)}
+                  </Text>
+                ) : (
+                  <Text className={styles.muted}>{formatEuro(r.actual)} · kein Budget</Text>
+                )}
+              </div>
+              {r.budget != null && r.ratio != null && (
+                <>
+                  <ProgressBar
+                    thickness="large"
+                    value={Math.min(r.ratio, 1)}
+                    color={budgetColor(r.ratio)}
+                    aria-label={`${r.categoryName}: ${formatPercent(r.ratio)} des Budgets ausgeschöpft`}
+                  />
+                  {r.ratio > 1 && <Caption1 className={styles.over}>Budget überschritten</Caption1>}
+                </>
+              )}
+            </div>
+          ))}
+          {totals.budget > 0 && totals.ratio != null && (
+            <div className={styles.budgetFoot}>
+              <Text weight="semibold">Gesamt</Text>
+              <Text className={totals.ratio > 1 ? styles.over : undefined}>
+                {formatEuro(totals.actual)} von {formatEuro(totals.budget)} ·{' '}
+                {formatPercent(totals.ratio)}
+              </Text>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  )
+}
 
 function ReportsPage() {
   const styles = useStyles()
@@ -137,19 +264,7 @@ function ReportsPage() {
       <div className={styles.grid}>
         <Card className={styles.panel}>
           <Subtitle2>Ausgaben nach Kategorie</Subtitle2>
-          <Field label="Zeitraum">
-            <Dropdown
-              selectedOptions={[period]}
-              value={periodOptions.find((o) => o.key === period)?.label ?? ''}
-              onOptionSelect={(_, d) => setPeriod((d.optionValue as PeriodKey) ?? 'quarter')}
-            >
-              {periodOptions.map((o) => (
-                <Option key={o.key} value={o.key}>
-                  {o.label}
-                </Option>
-              ))}
-            </Dropdown>
-          </Field>
+          <PeriodField value={period} onChange={setPeriod} />
           {expenses.isPending ? (
             <Spinner label="Wird geladen …" />
           ) : donutData.length === 0 ? (
@@ -187,6 +302,8 @@ function ReportsPage() {
             </div>
           )}
         </Card>
+
+        <BudgetsCard />
 
         <Card className={styles.panel}>
           <Subtitle2>Kontostand-Verlauf</Subtitle2>

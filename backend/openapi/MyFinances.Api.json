@@ -1181,6 +1181,44 @@
         }
       }
     },
+    "/api/reports/budgets": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "GetBudgetReport",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetReportResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/savings-goals/{year}/{month}": {
       "get": {
         "tags": [
@@ -1350,6 +1388,54 @@
           "balance": {
             "type": "number",
             "format": "decimal"
+          }
+        }
+      },
+      "BudgetLine": {
+        "required": [
+          "categoryId",
+          "categoryName",
+          "monthlyBudget",
+          "actual"
+        ],
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "monthlyBudget": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "decimal"
+          },
+          "actual": {
+            "type": "number",
+            "format": "decimal"
+          }
+        }
+      },
+      "BudgetReportResponse": {
+        "required": [
+          "months",
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "months": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BudgetLine"
+            }
           }
         }
       },

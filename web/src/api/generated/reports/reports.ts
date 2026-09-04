@@ -19,9 +19,11 @@ import type {
 
 import type {
   BalancePoint,
+  BudgetReportResponse,
   CashflowPoint,
   CategoryTotal,
   GetAccountBalanceSeriesParams,
+  GetBudgetReportParams,
   GetCashflowParams,
   GetExpensesByCategoryParams,
 } from '../model'
@@ -382,6 +384,111 @@ export function useGetAccountBalanceSeries<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetAccountBalanceSeriesQueryOptions(params, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+
+  return withQueryKey(query, queryOptions.queryKey)
+}
+
+export const getBudgetReport = (params?: GetBudgetReportParams, signal?: AbortSignal) => {
+  return customInstance<BudgetReportResponse>({
+    url: `/api/reports/budgets`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getGetBudgetReportQueryKey = (params?: GetBudgetReportParams) => {
+  return [`/api/reports/budgets`, ...(params ? [params] : [])] as const
+}
+
+export const getGetBudgetReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBudgetReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetBudgetReportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBudgetReport>>, TError, TData>>
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey = queryOptions?.queryKey ?? getGetBudgetReportQueryKey(params)
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBudgetReport>>> = ({ signal }) =>
+    getBudgetReport(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBudgetReport>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetBudgetReportQueryResult = NonNullable<Awaited<ReturnType<typeof getBudgetReport>>>
+export type GetBudgetReportQueryError = ErrorType<unknown>
+
+export function useGetBudgetReport<
+  TData = Awaited<ReturnType<typeof getBudgetReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params: undefined | GetBudgetReportParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBudgetReport>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBudgetReport>>,
+          TError,
+          Awaited<ReturnType<typeof getBudgetReport>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBudgetReport<
+  TData = Awaited<ReturnType<typeof getBudgetReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetBudgetReportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBudgetReport>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBudgetReport>>,
+          TError,
+          Awaited<ReturnType<typeof getBudgetReport>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBudgetReport<
+  TData = Awaited<ReturnType<typeof getBudgetReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetBudgetReportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBudgetReport>>, TError, TData>>
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetBudgetReport<
+  TData = Awaited<ReturnType<typeof getBudgetReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetBudgetReportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBudgetReport>>, TError, TData>>
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBudgetReportQueryOptions(params, options)
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
