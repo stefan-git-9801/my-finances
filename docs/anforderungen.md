@@ -11,9 +11,10 @@ Neon) abgebildet sind.
 > [Umsetzungsentscheidungen](#umsetzungsentscheidungen) ergänzen. Technische
 > Detailkonventionen stehen in [`AGENTS.md`](../AGENTS.md), nicht hier.
 
-Stand: 2026-09-03 · Umgesetzt: Phasen 1–3 (Datenmodell/API, Kern-UI, Dashboard &
-Auswertungen) sowie monatliches Sparziel mit Tagesbudget-Berechnung. Offen:
-Phase 4 (CSV-Export-Button in der UI, PWA).
+Stand: 2026-09-04 · Umgesetzt: Phasen 1–3 (Datenmodell/API, Kern-UI, Dashboard &
+Auswertungen), monatliches Sparziel mit Tagesbudget-Berechnung sowie die
+Budget-Auswertung (Ist vs. Soll je Kategorie). Offen: Phase 4 (CSV-Export-Button
+in der UI, PWA).
 
 ---
 
@@ -72,7 +73,7 @@ Mac. Betrieb möglichst kostenlos innerhalb der Free-Tiers von Railway und Neon.
 | 6.1 | Vorgegebene Startliste an Kategorien beim ersten Start. | ✅ 9 Kategorien, `IsDefault = true` (Lebensmittel, Wohnen/Miete, Freizeit, Transport, Gesundheit, Versicherung, Sonstiges, Gehalt, Sonstige Einnahmen) |
 | 6.2 | Kategorien frei erweitern, bearbeiten, löschen. | ✅ (auch die Standard-Kategorien) |
 | 6.3 | Kategorie hat eine Art: Ausgaben oder Einnahmen. | ✅ Enum `CategoryKind` = `Expense / Income` |
-| 6.4 | Optionales Monatsbudget pro Kategorie. | ✅ Feld `MonthlyBudget` (ein Wert, gilt für alle Monate) – Erfassung im UI vorhanden; Budget-Auswertung (Ist vs. Soll) noch offen |
+| 6.4 | Optionales Monatsbudget pro Kategorie. | ✅ Feld `MonthlyBudget` (ein Wert, gilt für alle Monate); Erfassung im UI, Budget-Auswertung (Ist vs. Soll) siehe 8.9 |
 | 6.5 | Kategorie mit Buchungen/Vorlagen kann nicht gelöscht werden. | ✅ HTTP 409 |
 | 6.6 | Kategoriename ist eindeutig. | ✅ HTTP 400 bei Dublette |
 | 6.7 | Monatliches Sparziel je Kalendermonat definierbar (ein Betrag pro Jahr/Monat). | ✅ Entität `MonthlySavingsGoal`, `GET/PUT /api/savings-goals/{year}/{month}`; Bedienung auf dem Dashboard (laufender Monat). Betrag 0/leer = kein Sparziel |
@@ -101,6 +102,7 @@ Mac. Betrieb möglichst kostenlos innerhalb der Free-Tiers von Railway und Neon.
 | 8.6 | Kontostand-Verlauf je Konto. | ✅ Linienchart mit Konto-Auswahl (`GET /api/reports/account-balances`) |
 | 8.7 | Diagramme in Hell und Dunkel. | ✅ `@fluentui/react-charts`, Farben aus [`lib/chartColors.ts`](../web/src/lib/chartColors.ts) (validierte kategoriale Palette; Einnahmen = grün, Ausgaben = rot) |
 | 8.8 | Dashboard-Tagesbudget: „frei verfügbar" = (Einnahmen − Ausgaben des Monats, **je inkl. der für den Restmonat fälligen aktiven Vorlagen**) − Sparziel des Monats; „täglich verfügbar" = frei verfügbar / verbleibende Tage (**ab morgen** bis Monatsende; am Monatsletzten „–"). | ✅ Feld `dailyBudget` in `GET /api/dashboard` |
+| 8.9 | Budget-Auswertung: Ist-Ausgaben je Ausgaben-Kategorie gegen das Monatsbudget, mit Fortschrittsbalken (grün < 80 %, gelb 80–100 %, rot > 100 %) und explizitem Hinweis „Budget überschritten". Im mehrmonatigen Zeitraum wird das Monatsbudget hochskaliert (`Budget × berührte Kalendermonate`). | ✅ `GET /api/reports/budgets` (Query `from`/`to`), Karte „Budgets" auf `/reports` mit eigener Zeitraum-Auswahl (Default „Dieser Monat"). Kategorien ohne Budget, aber mit Ausgaben im Zeitraum erscheinen als „kein Budget"; Kategorien ohne Budget **und** ohne Ausgaben werden nicht gelistet. Budget 0 zählt als „kein Budget". |
 
 ## 9. CSV-Export
 
@@ -149,7 +151,7 @@ URL-Pfade englisch, sichtbare Beschriftungen deutsch.
 | Umbuchungen | `GET/POST /api/transfers`, `GET/PUT/DELETE /api/transfers/{id}` |
 | Vorlagen | `GET/POST /api/recurring-templates`, `GET/PUT/DELETE /api/recurring-templates/{id}` |
 | Dashboard | `GET /api/dashboard` (inkl. `dailyBudget`: Sparziel, geplante Vorlagen, frei verfügbar, verbleibende Tage, Tagesbetrag) |
-| Auswertungen | `GET /api/reports/expenses-by-category`, `GET /api/reports/cashflow`, `GET /api/reports/account-balances` |
+| Auswertungen | `GET /api/reports/expenses-by-category`, `GET /api/reports/cashflow`, `GET /api/reports/account-balances`, `GET /api/reports/budgets` |
 | Sparziele | `GET/PUT /api/savings-goals/{year}/{month}` |
 
 Der TypeScript-Client wird mit Orval aus `backend/openapi/MyFinances.Api.json`
@@ -189,6 +191,7 @@ bzw. konkretisiert – jeweils mit dem Nutzer abgestimmt:
 | Sparziel | Eigene Tabelle `MonthlySavingsGoal` je (Jahr, Monat) – bewusst abweichend vom Kategorie-Monatsbudget, weil der Nutzer monatsgenaue Sparziele will. Betrag 0 ⇒ Zeile wird gelöscht (kein separater DELETE-Endpunkt). |
 | Tagesbudget-Basis | „frei verfügbar" = verbuchte Einnahmen − verbuchte Ausgaben des Monats, **zzgl. der für den Restmonat (Fälligkeit > heute) noch fälligen aktiven Vorlagen**, minus Sparziel. Verbleibende Tage zählen **ab morgen** (heute gilt als abgeschlossen). Reiner Helper `RecurringSchedule.OccurrenceInMonth` + Tests. |
 | CSV-Export | Server-Endpunkt (`text/csv`), nicht clientseitig erzeugt. |
+| Budget-Auswertung | Eigene Zeitraum-Auswahl je Karte (dieselben Optionen wie „Ausgaben nach Kategorie", Default „Dieser Monat") – bewusst nicht an den Selektor der Nachbarkarte gekoppelt, damit beide unabhängig bedienbar bleiben. Bei mehreren Monaten wird das (weiterhin monatliche) `MonthlyBudget` mit der Zahl der berührten Kalendermonate multipliziert (angebrochene Monate zählen voll). Reiner Helper `Reports.BudgetPeriod.MonthsInclusive` + Tests. Zeitraum „Gesamt": Skalierung von der frühesten verbuchten Ausgabe **bis heute** (grobe Lebenszeit-Summe). Budget ≤ 0 gilt als „kein Budget" (DTO liefert `null`). Antwort ist ein Objekt `{ months, lines }` (nicht wie die übrigen Reports ein Array), weil der Monats-Skalar gebraucht wird. Ampelfarben aus den Fluent-`ProgressBar`-Status (`success`/`warning`/`error`), nicht aus `chartColors.ts` – das sind Komponenten-Zustände, keine kategorialen Chart-Farben. |
 | Migrationen | Eine frische `InitialCreate`; die generischen `Account`/`Transaction`-Entitäten des Ausgangsstands wurden gelöscht. |
 | Währung | Kein Währungsfeld – ausschließlich Euro. |
 | Diagrammfarben | Feste, mit der `dataviz`-Skill validierte kategoriale Palette in `lib/chartColors.ts`; nicht Fluents Standard-Palette (fällt beim CVD-Check durch). |
@@ -198,9 +201,6 @@ bzw. konkretisiert – jeweils mit dem Nutzer abgestimmt:
 
 - **Phase 4**: CSV-Export-Button samt Filterdialog in der Buchungsliste; PWA
   (`vite-plugin-pwa`, Manifest, Icons, `apple-mobile-web-app-*`-Meta).
-- Budget-Auswertung: Ist-Ausgaben je Kategorie gegen `MonthlyBudget` (Fortschritt,
-  Warnung bei Überschreitung). (Das monatliche Sparziel / Tagesbudget aus 6.7 / 8.8
-  ist davon unabhängig und bereits umgesetzt.)
 - Sparziel/Tagesbudget: bisher nur für den laufenden Monat im UI bedienbar; andere
   Monate sind über die API erreichbar, aber ohne Oberfläche.
 - Kontostand-Verlauf ggf. als Mehrlinien-Diagramm über alle Konten.
