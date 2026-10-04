@@ -10,7 +10,7 @@ import {
   useGetExpensesByCategory,
 } from '../api/generated/reports/reports'
 import { formatDate, formatEuro, formatPercent } from '../lib/format'
-import { categoricalColor, expenseColor, incomeColor } from '../lib/chartColors'
+import { categoricalColor, expenseColor, incomeColor, otherColor } from '../lib/chartColors'
 import { DIMMED_TEXT, NEGATIVE_TEXT } from '../lib/colors'
 import { useIsDark } from '../theme'
 import { PageHeader } from '../components/PageHeader'
@@ -187,8 +187,7 @@ function ReportsPage() {
       value: r.total,
       color: categoricalColor(i, isDark),
     }))
-    if (rest > 0)
-      points.push({ name: 'Weitere', value: rest, color: categoricalColor(MAX_SLICES, isDark) })
+    if (rest > 0) points.push({ name: 'Weitere', value: rest, color: otherColor(isDark) })
     return points
   }, [expenses.data, isDark])
 

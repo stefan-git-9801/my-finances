@@ -53,3 +53,8 @@ export function incomeColor(isDark: boolean): string {
 export function expenseColor(isDark: boolean): string {
   return isDark ? SEMANTIC.expense.dark : SEMANTIC.expense.light
 }
+
+/** Neutral grey for the aggregated "Weitere" slice, so it never reuses a categorical hue. */
+export function otherColor(isDark: boolean): string {
+  return isDark ? '#9a9a9a' : '#767676'
+}

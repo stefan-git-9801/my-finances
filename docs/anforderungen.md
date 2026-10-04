@@ -195,7 +195,7 @@ bzw. konkretisiert – jeweils mit dem Nutzer abgestimmt:
 | Migrationen | Eine frische `InitialCreate`; die generischen `Account`/`Transaction`-Entitäten des Ausgangsstands wurden gelöscht. |
 | Währung | Kein Währungsfeld – ausschließlich Euro. |
 | UI-Bibliothek | Umstieg von Fluent UI v9 auf Mantine v9 (`@mantine/core`, `@mantine/charts`). Datumsfelder bleiben native `type="date"`-Inputs (kein `@mantine/dates`/dayjs). Beträge sind weiter Texteingaben mit Komma-Parser (`parseAmount`). Hell/Dunkel folgt dem OS (`defaultColorScheme="auto"`). Tabellen über die gemeinsame `DataTable`-Komponente; Donut-Diagramme mit eigener Legende (`ExpenseDonut`), da Mantines `DonutChart` keine hat. |
-| Diagrammfarben | Feste, mit der `dataviz`-Skill validierte kategoriale Palette in `lib/chartColors.ts`; nicht Fluents Standard-Palette (fällt beim CVD-Check durch). |
+| Diagrammfarben | Feste, mit der `dataviz`-Skill validierte kategoriale Palette in `lib/chartColors.ts`; nicht Fluents Standard-Palette (fällt beim CVD-Check durch). Die Sammel-Scheibe „Weitere“ nutzt ein neutrales Grau (`otherColor`), nie eine zyklisch wiederholte Kategorienfarbe. |
 | Statische Web-Assets | `StaticWebAssetsEnabled=false` – das Frontend ist ein reiner Vite-Build aus dem physischen `wwwroot/`. |
 
 ## 15. Offene Punkte / nächste Schritte

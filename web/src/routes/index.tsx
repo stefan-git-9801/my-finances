@@ -8,7 +8,7 @@ import { useUpsertSavingsGoal } from '../api/generated/savings-goals/savings-goa
 import { accountTypeLabel } from '../lib/labels'
 import { formatEuro, parseAmount } from '../lib/format'
 import { errorMessage } from '../lib/errors'
-import { categoricalColor } from '../lib/chartColors'
+import { categoricalColor, otherColor } from '../lib/chartColors'
 import { useIsDark } from '../theme'
 import { StatTile } from '../components/StatTile'
 import { ExpenseDonut } from '../components/ExpenseDonut'
@@ -60,7 +60,7 @@ function DashboardPage() {
       points.push({
         name: 'Weitere',
         value: restTotal,
-        color: categoricalColor(MAX_SLICES, isDark),
+        color: otherColor(isDark),
       })
     }
     return points
