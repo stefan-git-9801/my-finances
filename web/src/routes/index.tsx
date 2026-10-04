@@ -1,79 +1,23 @@
 import { type FormEvent, useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Body1,
-  Button,
-  Card,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  Field,
-  Input,
-  Spinner,
-  Subtitle2,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  MessageBar,
-  makeStyles,
-  mergeClasses,
-  tokens,
-} from '@fluentui/react-components'
-import { DonutChart, ResponsiveContainer } from '@fluentui/react-charts'
+import { Alert, Button, Card, Group, Table, Text, TextInput, Title } from '@mantine/core'
 import { getGetDashboardQueryKey, useGetDashboard } from '../api/generated/dashboard/dashboard'
 import { useGetExpensesByCategory } from '../api/generated/reports/reports'
 import { useUpsertSavingsGoal } from '../api/generated/savings-goals/savings-goals'
 import { accountTypeLabel } from '../lib/labels'
 import { formatEuro, parseAmount } from '../lib/format'
 import { errorMessage } from '../lib/errors'
-import { categoricalColor } from '../lib/chartColors'
+import { categoricalColor, otherColor } from '../lib/chartColors'
 import { useIsDark } from '../theme'
 import { StatTile } from '../components/StatTile'
+import { ExpenseDonut } from '../components/ExpenseDonut'
+import { FormModal } from '../components/FormModal'
+import { Loading } from '../components/Loading'
+import { NEGATIVE_TEXT, POSITIVE_TEXT } from '../lib/colors'
+import classes from '../styles/grids.module.css'
 
 export const Route = createFileRoute('/')({ component: DashboardPage })
-
-const useStyles = makeStyles({
-  tiles: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: '14px',
-    marginBottom: '20px',
-  },
-  columns: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '16px',
-    alignItems: 'start',
-  },
-  panel: { padding: '18px' },
-  panelHead: { marginBottom: '12px', display: 'block' },
-  budgetPanel: { padding: '18px', marginBottom: '20px' },
-  budgetHead: {
-    marginBottom: '12px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  budgetTiles: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: '14px',
-  },
-  budgetHint: { marginTop: '10px', display: 'block', color: tokens.colorNeutralForeground3 },
-  chartWrap: { width: '100%', minHeight: '260px' },
-  amount: { justifyContent: 'flex-end', textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
-  positive: { color: tokens.colorPaletteGreenForeground1 },
-  negative: { color: tokens.colorPaletteRedForeground1 },
-  form: { display: 'flex', flexDirection: 'column', rowGap: '12px' },
-})
 
 const pad = (n: number) => String(n).padStart(2, '0')
 function monthBounds() {
@@ -87,7 +31,6 @@ function monthBounds() {
 const MAX_SLICES = 8
 
 function DashboardPage() {
-  const styles = useStyles()
   const isDark = useIsDark()
   const queryClient = useQueryClient()
   const { from, to } = useMemo(() => monthBounds(), [])
@@ -109,26 +52,29 @@ function DashboardPage() {
     const head = rows.slice(0, MAX_SLICES)
     const restTotal = rows.slice(MAX_SLICES).reduce((sum, r) => sum + r.total, 0)
     const points = head.map((r, i) => ({
-      legend: r.categoryName,
-      data: r.total,
+      name: r.categoryName,
+      value: r.total,
       color: categoricalColor(i, isDark),
     }))
     if (restTotal > 0) {
-      points.push({ legend: 'Weitere', data: restTotal, color: categoricalColor(MAX_SLICES, isDark) })
+      points.push({
+        name: 'Weitere',
+        value: restTotal,
+        color: otherColor(isDark),
+      })
     }
     return points
   }, [expenses.data, isDark])
 
   if (dashboard.isPending) {
-    return <Spinner label="Übersicht wird geladen …" />
+    return <Loading label="Übersicht wird geladen …" />
   }
   if (dashboard.isError) {
-    return <MessageBar intent="error">Die Übersicht konnte nicht geladen werden.</MessageBar>
+    return <Alert color="red">Die Übersicht konnte nicht geladen werden.</Alert>
   }
 
   const d = dashboard.data
   const savings = d.savingsRate == null ? '–' : `${Math.round(d.savingsRate * 100)} %`
-  const totalExpenses = donutData.reduce((s, p) => s + p.data, 0)
 
   const budget = d.dailyBudget
   const goalLabel = budget.savingsGoal == null ? 'Nicht gesetzt' : formatEuro(budget.savingsGoal)
@@ -143,9 +89,7 @@ function DashboardPage() {
       : null
 
   function openGoalDialog() {
-    setGoalInput(
-      budget.savingsGoal != null ? String(budget.savingsGoal).replace('.', ',') : '',
-    )
+    setGoalInput(budget.savingsGoal != null ? String(budget.savingsGoal).replace('.', ',') : '')
     upsertGoal.reset()
     setGoalDialogOpen(true)
   }
@@ -169,142 +113,118 @@ function DashboardPage() {
 
   return (
     <>
-      <div className={styles.tiles}>
+      <div className={classes.tiles} style={{ marginBottom: 'var(--mantine-spacing-lg)' }}>
         <StatTile label="Nettovermögen" value={formatEuro(d.netWorth)} />
         <StatTile
           label="Einnahmen (Monat)"
           value={formatEuro(d.monthIncome)}
-          valueColor={tokens.colorPaletteGreenForeground1}
+          valueColor={POSITIVE_TEXT}
         />
         <StatTile
           label="Ausgaben (Monat)"
           value={formatEuro(d.monthExpense)}
-          valueColor={tokens.colorPaletteRedForeground1}
+          valueColor={NEGATIVE_TEXT}
         />
-        <StatTile label="Sparquote (Monat)" value={savings} hint="Anteil der Einnahmen, der übrig bleibt" />
+        <StatTile
+          label="Sparquote (Monat)"
+          value={savings}
+          hint="Anteil der Einnahmen, der übrig bleibt"
+        />
       </div>
 
-      <Card className={styles.budgetPanel}>
-        <div className={styles.budgetHead}>
-          <Subtitle2>Tagesbudget (Monat)</Subtitle2>
-          <Button size="small" onClick={openGoalDialog}>
+      <Card withBorder padding="lg" mb="lg">
+        <Group justify="space-between" mb="md">
+          <Title order={5}>Tagesbudget (Monat)</Title>
+          <Button size="compact-sm" variant="default" onClick={openGoalDialog}>
             Sparziel bearbeiten
           </Button>
-        </div>
-        <div className={styles.budgetTiles}>
+        </Group>
+        <div className={classes.tiles}>
           <StatTile label="Sparziel (Monat)" value={goalLabel} />
           <StatTile
             label="Frei verfügbar (Monat)"
             value={formatEuro(budget.available)}
-            valueColor={
-              budget.available < 0
-                ? tokens.colorPaletteRedForeground1
-                : tokens.colorPaletteGreenForeground1
-            }
+            valueColor={budget.available < 0 ? NEGATIVE_TEXT : POSITIVE_TEXT}
             hint="Einnahmen − Ausgaben − Sparziel"
           />
           <StatTile label="Täglich verfügbar" value={perDayLabel} hint={daysHint} />
         </div>
-        {plannedHint != null && <Body1 className={styles.budgetHint}>{plannedHint}</Body1>}
+        {plannedHint != null && (
+          <Text size="sm" c="dimmed" mt="sm">
+            {plannedHint}
+          </Text>
+        )}
       </Card>
 
-      <div className={styles.columns}>
-        <Card className={styles.panel}>
-          <Subtitle2 className={styles.panelHead}>Kontosalden</Subtitle2>
+      <div className={classes.columns}>
+        <Card withBorder padding="lg">
+          <Title order={5} mb="md">
+            Kontosalden
+          </Title>
           {d.accounts.length === 0 ? (
-            <Body1>Noch keine Konten angelegt.</Body1>
+            <Text>Noch keine Konten angelegt.</Text>
           ) : (
-            <Table size="small">
-              <TableHeader>
-                <TableRow>
-                  <TableHeaderCell>Konto</TableHeaderCell>
-                  <TableHeaderCell>Typ</TableHeaderCell>
-                  <TableHeaderCell className={styles.amount}>Saldo</TableHeaderCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <Table verticalSpacing="xs">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Konto</Table.Th>
+                  <Table.Th>Typ</Table.Th>
+                  <Table.Th ta="right">Saldo</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
                 {d.accounts.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell>{a.name}</TableCell>
-                    <TableCell>{accountTypeLabel[a.type]}</TableCell>
-                    <TableCell
-                      className={mergeClasses(
-                        styles.amount,
-                        a.currentBalance < 0 ? styles.negative : styles.positive,
-                      )}
+                  <Table.Tr key={a.id}>
+                    <Table.Td>{a.name}</Table.Td>
+                    <Table.Td>{accountTypeLabel[a.type]}</Table.Td>
+                    <Table.Td
+                      className={classes.amount}
+                      c={a.currentBalance < 0 ? NEGATIVE_TEXT : POSITIVE_TEXT}
                     >
                       {formatEuro(a.currentBalance)}
-                    </TableCell>
-                  </TableRow>
+                    </Table.Td>
+                  </Table.Tr>
                 ))}
-              </TableBody>
+              </Table.Tbody>
             </Table>
           )}
         </Card>
 
-        <Card className={styles.panel}>
-          <Subtitle2 className={styles.panelHead}>Ausgaben nach Kategorie (Monat)</Subtitle2>
+        <Card withBorder padding="lg">
+          <Title order={5} mb="md">
+            Ausgaben nach Kategorie (Monat)
+          </Title>
           {expenses.isPending ? (
-            <Spinner label="Wird geladen …" />
+            <Loading label="Wird geladen …" />
           ) : donutData.length === 0 ? (
-            <Body1>Für diesen Monat sind keine Ausgaben erfasst.</Body1>
+            <Text>Für diesen Monat sind keine Ausgaben erfasst.</Text>
           ) : (
-            <div className={styles.chartWrap}>
-              <ResponsiveContainer width="100%" height={280}>
-                <DonutChart
-                  data={{ chartTitle: 'Ausgaben nach Kategorie', chartData: donutData }}
-                  innerRadius={55}
-                  valueInsideDonut={formatEuro(totalExpenses)}
-                  hideLegend={false}
-                  culture="de-DE"
-                />
-              </ResponsiveContainer>
-            </div>
+            <ExpenseDonut data={donutData} />
           )}
         </Card>
       </div>
 
-      <Dialog open={goalDialogOpen} onOpenChange={(_, data) => setGoalDialogOpen(data.open)}>
-        <DialogSurface>
-          <form onSubmit={onGoalSubmit}>
-            <DialogBody>
-              <DialogTitle>Sparziel für diesen Monat</DialogTitle>
-              <DialogContent className={styles.form}>
-                <Body1>
-                  Der Betrag wird vom frei verfügbaren Geld abgezogen. Leer oder 0 = kein Sparziel.
-                </Body1>
-                <Field
-                  label="Sparziel (€)"
-                  validationState={goalInvalid ? 'error' : 'none'}
-                  validationMessage={goalInvalid ? 'Bitte einen gültigen Betrag eingeben.' : undefined}
-                >
-                  <Input
-                    value={goalInput}
-                    onChange={(_, data) => setGoalInput(data.value)}
-                    inputMode="decimal"
-                    placeholder="z. B. 300,00"
-                  />
-                </Field>
-                {upsertGoal.isError && (
-                  <MessageBar intent="error">{errorMessage(upsertGoal.error)}</MessageBar>
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button appearance="secondary" type="button" onClick={() => setGoalDialogOpen(false)}>
-                  Abbrechen
-                </Button>
-                <Button
-                  appearance="primary"
-                  type="submit"
-                  disabled={upsertGoal.isPending || goalInvalid}
-                >
-                  Speichern
-                </Button>
-              </DialogActions>
-            </DialogBody>
-          </form>
-        </DialogSurface>
-      </Dialog>
+      <FormModal
+        opened={goalDialogOpen}
+        title="Sparziel für diesen Monat"
+        error={upsertGoal.isError ? errorMessage(upsertGoal.error) : null}
+        saving={upsertGoal.isPending}
+        canSubmit={!goalInvalid}
+        onClose={() => setGoalDialogOpen(false)}
+        onSubmit={onGoalSubmit}
+      >
+        <Text>
+          Der Betrag wird vom frei verfügbaren Geld abgezogen. Leer oder 0 = kein Sparziel.
+        </Text>
+        <TextInput
+          label="Sparziel (€)"
+          error={goalInvalid ? 'Bitte einen gültigen Betrag eingeben.' : undefined}
+          value={goalInput}
+          onChange={(e) => setGoalInput(e.currentTarget.value)}
+          inputMode="decimal"
+          placeholder="z. B. 300,00"
+        />
+      </FormModal>
     </>
   )
 }

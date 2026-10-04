@@ -14,14 +14,15 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@fluentui/react-charts": "9.3.25",
-    "@fluentui/react-components": "^9.74.7",
-    "@griffel/react": "^1.7.7",
+    "@mantine/charts": "^9.6.3",
+    "@mantine/core": "^9.6.3",
+    "@mantine/hooks": "^9.6.3",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-router": "^1.170.32",
     "axios": "^1.20.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.102.8",
@@ -34,6 +35,9 @@
     "@vitejs/plugin-react": "^6.1.0",
     "orval": "^8.27.0",
     "oxlint": "^1.79.0",
+    "postcss": "^8.5.28",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.9.6",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"

@@ -1,31 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Body1,
-  Button,
-  DataGrid,
-  DataGridBody,
-  DataGridCell,
-  DataGridHeader,
-  DataGridHeaderCell,
-  DataGridRow,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  Dropdown,
-  Field,
-  Input,
-  MessageBar,
-  Option,
-  Spinner,
-  createTableColumn,
-  makeStyles,
-} from '@fluentui/react-components'
-import type { TableColumnDefinition } from '@fluentui/react-components'
+import { Alert, Button, Select, Text, TextInput } from '@mantine/core'
 import {
   getGetCategoriesQueryKey,
   useCreateCategory,
@@ -40,13 +16,12 @@ import { formatEuro, parseAmount } from '../lib/format'
 import { errorMessage } from '../lib/errors'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DataTable, type Column } from '../components/DataTable'
+import { FormModal } from '../components/FormModal'
+import { Loading } from '../components/Loading'
+import { RowActions } from '../components/RowActions'
 
 export const Route = createFileRoute('/categories')({ component: CategoriesPage })
-
-const useStyles = makeStyles({
-  form: { display: 'flex', flexDirection: 'column', rowGap: '12px' },
-  actions: { display: 'flex', gap: '8px' },
-})
 
 type FormState = { name: string; kind: CategoryKind; monthlyBudget: string }
 
@@ -54,7 +29,6 @@ const emptyForm: FormState = { name: '', kind: CategoryKind.Expense, monthlyBudg
 const kindOptions = [CategoryKind.Expense, CategoryKind.Income]
 
 function CategoriesPage() {
-  const styles = useStyles()
   const queryClient = useQueryClient()
   const categories = useGetCategories()
 
@@ -125,119 +99,75 @@ function CategoriesPage() {
     }
   }
 
-  const columns: TableColumnDefinition<CategoryResponse>[] = [
-    createTableColumn({
-      columnId: 'name',
-      renderHeaderCell: () => 'Name',
-      renderCell: (c) => c.name,
-    }),
-    createTableColumn({
-      columnId: 'kind',
-      renderHeaderCell: () => 'Art',
-      renderCell: (c) => categoryKindLabel[c.kind],
-    }),
-    createTableColumn({
-      columnId: 'monthlyBudget',
-      renderHeaderCell: () => 'Monatsbudget',
-      renderCell: (c) => (c.monthlyBudget != null ? formatEuro(c.monthlyBudget) : '—'),
-    }),
-    createTableColumn({
-      columnId: 'actions',
-      renderHeaderCell: () => '',
-      renderCell: (c) => (
-        <div className={styles.actions}>
-          <Button size="small" onClick={() => openEdit(c)}>
-            Bearbeiten
-          </Button>
-          <Button size="small" onClick={() => setToDelete(c)}>
-            Löschen
-          </Button>
-        </div>
-      ),
-    }),
+  const columns: Column<CategoryResponse>[] = [
+    { key: 'name', header: 'Name', render: (c) => c.name },
+    { key: 'kind', header: 'Art', render: (c) => categoryKindLabel[c.kind] },
+    {
+      key: 'monthlyBudget',
+      header: 'Monatsbudget',
+      render: (c) => (c.monthlyBudget != null ? formatEuro(c.monthlyBudget) : '—'),
+      align: 'right',
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (c) => <RowActions onEdit={() => openEdit(c)} onDelete={() => setToDelete(c)} />,
+    },
   ]
 
   return (
     <>
       <PageHeader title="Kategorien">
-        <Button appearance="primary" onClick={openCreate}>
-          Neue Kategorie
-        </Button>
+        <Button onClick={openCreate}>Neue Kategorie</Button>
       </PageHeader>
 
       {categories.isPending ? (
-        <Spinner label="Kategorien werden geladen …" />
+        <Loading label="Kategorien werden geladen …" />
       ) : categories.isError ? (
-        <MessageBar intent="error">Kategorien konnten nicht geladen werden.</MessageBar>
+        <Alert color="red">Kategorien konnten nicht geladen werden.</Alert>
       ) : categories.data.length === 0 ? (
-        <Body1>Noch keine Kategorien.</Body1>
+        <Text>Noch keine Kategorien.</Text>
       ) : (
-        <DataGrid items={categories.data} columns={columns} getRowId={(c) => c.id}>
-          <DataGridHeader>
-            <DataGridRow>
-              {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
-            </DataGridRow>
-          </DataGridHeader>
-          <DataGridBody<CategoryResponse>>
-            {({ item, rowId }) => (
-              <DataGridRow<CategoryResponse> key={rowId}>
-                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
-              </DataGridRow>
-            )}
-          </DataGridBody>
-        </DataGrid>
+        <DataTable rows={categories.data} columns={columns} getRowId={(c) => c.id} />
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={(_, d) => setDialogOpen(d.open)}>
-        <DialogSurface>
-          <form onSubmit={onSubmit}>
-            <DialogBody>
-              <DialogTitle>{editing ? 'Kategorie bearbeiten' : 'Neue Kategorie'}</DialogTitle>
-              <DialogContent className={styles.form}>
-                <Field label="Name" required>
-                  <Input
-                    value={form.name}
-                    onChange={(_, d) => setForm((f) => ({ ...f, name: d.value }))}
-                  />
-                </Field>
-                <Field label="Art" required>
-                  <Dropdown
-                    selectedOptions={[form.kind]}
-                    value={categoryKindLabel[form.kind]}
-                    onOptionSelect={(_, d) =>
-                      setForm((f) => ({ ...f, kind: d.optionValue as CategoryKind }))
-                    }
-                  >
-                    {kindOptions.map((k) => (
-                      <Option key={k} value={k}>
-                        {categoryKindLabel[k]}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </Field>
-                <Field label="Monatsbudget (optional)" hint="Leer lassen für kein Budget.">
-                  <Input
-                    value={form.monthlyBudget}
-                    onChange={(_, d) => setForm((f) => ({ ...f, monthlyBudget: d.value }))}
-                    placeholder="z. B. 300,00"
-                  />
-                </Field>
-                {saveError && (
-                  <MessageBar intent="error">{errorMessage(saveError, 'Speichern fehlgeschlagen.')}</MessageBar>
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button appearance="secondary" type="button" onClick={() => setDialogOpen(false)}>
-                  Abbrechen
-                </Button>
-                <Button appearance="primary" type="submit" disabled={saving || form.name.trim() === ''}>
-                  Speichern
-                </Button>
-              </DialogActions>
-            </DialogBody>
-          </form>
-        </DialogSurface>
-      </Dialog>
+      <FormModal
+        opened={dialogOpen}
+        title={editing ? 'Kategorie bearbeiten' : 'Neue Kategorie'}
+        error={saveError ? errorMessage(saveError, 'Speichern fehlgeschlagen.') : null}
+        saving={saving}
+        canSubmit={form.name.trim() !== ''}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={onSubmit}
+      >
+        <TextInput
+          label="Name"
+          required
+          value={form.name}
+          onChange={(e) => {
+            const name = e.currentTarget.value
+            setForm((f) => ({ ...f, name }))
+          }}
+        />
+        <Select
+          label="Art"
+          required
+          allowDeselect={false}
+          data={kindOptions.map((k) => ({ value: k, label: categoryKindLabel[k] }))}
+          value={form.kind}
+          onChange={(v) => v && setForm((f) => ({ ...f, kind: v as CategoryKind }))}
+        />
+        <TextInput
+          label="Monatsbudget (optional)"
+          description="Leer lassen für kein Budget."
+          value={form.monthlyBudget}
+          onChange={(e) => {
+            const monthlyBudget = e.currentTarget.value
+            setForm((f) => ({ ...f, monthlyBudget }))
+          }}
+          placeholder="z. B. 300,00"
+        />
+      </FormModal>
 
       <ConfirmDialog
         open={toDelete !== null}

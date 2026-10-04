@@ -1,28 +1,5 @@
 import type { ReactNode } from 'react'
-import { Card, makeStyles, tokens } from '@fluentui/react-components'
-
-const useStyles = makeStyles({
-  card: {
-    padding: '16px 18px',
-    display: 'flex',
-    flexDirection: 'column',
-    rowGap: '4px',
-    minWidth: 0,
-  },
-  label: {
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground3,
-  },
-  value: {
-    fontSize: tokens.fontSizeHero700,
-    fontWeight: tokens.fontWeightSemibold,
-    lineHeight: tokens.lineHeightHero700,
-  },
-  hint: {
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground3,
-  },
-})
+import { Card, Stack, Text } from '@mantine/core'
 
 export function StatTile({
   label,
@@ -35,14 +12,21 @@ export function StatTile({
   hint?: ReactNode
   valueColor?: string
 }) {
-  const styles = useStyles()
   return (
-    <Card className={styles.card}>
-      <span className={styles.label}>{label}</span>
-      <span className={styles.value} style={valueColor ? { color: valueColor } : undefined}>
-        {value}
-      </span>
-      {hint != null && <span className={styles.hint}>{hint}</span>}
+    <Card withBorder padding="md" miw={0}>
+      <Stack gap={4}>
+        <Text size="xs" c="dimmed">
+          {label}
+        </Text>
+        <Text fz={28} fw={600} lh={1.2} c={valueColor}>
+          {value}
+        </Text>
+        {hint != null && (
+          <Text size="xs" c="dimmed">
+            {hint}
+          </Text>
+        )}
+      </Stack>
     </Card>
   )
 }

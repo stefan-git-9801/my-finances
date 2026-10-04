@@ -1,47 +1,13 @@
 import { type FormEvent, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Body1,
-  Button,
-  Card,
-  Field,
-  Input,
-  Title2,
-  makeStyles,
-  shorthands,
-  tokens,
-} from '@fluentui/react-components'
+import { Button, Card, Center, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { getGetCurrentUserQueryKey, useLogin } from '../api/generated/auth/auth'
+import { NEGATIVE_TEXT } from '../lib/colors'
 
 export const Route = createFileRoute('/login')({ component: LoginPage })
 
-const useStyles = makeStyles({
-  wrap: {
-    display: 'grid',
-    placeItems: 'center',
-    minHeight: '100%',
-    ...shorthands.padding('24px'),
-  },
-  card: {
-    width: '360px',
-    display: 'flex',
-    flexDirection: 'column',
-    rowGap: '16px',
-    ...shorthands.padding('28px'),
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    rowGap: '12px',
-  },
-  error: {
-    color: tokens.colorPaletteRedForeground1,
-  },
-})
-
 function LoginPage() {
-  const styles = useStyles()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -65,35 +31,38 @@ function LoginPage() {
   }
 
   return (
-    <div className={styles.wrap}>
-      <Card className={styles.card}>
-        <Title2>Anmelden</Title2>
+    <Center mih="100%" p="lg">
+      <Card withBorder padding="xl" w={360} maw="100%">
+        <Stack gap="md">
+          <Title order={2}>Anmelden</Title>
 
-        <form className={styles.form} onSubmit={onSubmit}>
-          <Field label="E-Mail" required>
-            <Input
-              type="email"
-              value={email}
-              autoComplete="email"
-              onChange={(_, d) => setEmail(d.value)}
-            />
-          </Field>
-          <Field label="Passwort" required>
-            <Input
-              type="password"
-              value={password}
-              autoComplete="current-password"
-              onChange={(_, d) => setPassword(d.value)}
-            />
-          </Field>
+          <form onSubmit={onSubmit}>
+            <Stack gap="sm">
+              <TextInput
+                label="E-Mail"
+                type="email"
+                required
+                value={email}
+                autoComplete="email"
+                onChange={(e) => setEmail(e.currentTarget.value)}
+              />
+              <PasswordInput
+                label="Passwort"
+                required
+                value={password}
+                autoComplete="current-password"
+                onChange={(e) => setPassword(e.currentTarget.value)}
+              />
 
-          {error && <Body1 className={styles.error}>{error}</Body1>}
+              {error && <Text c={NEGATIVE_TEXT}>{error}</Text>}
 
-          <Button appearance="primary" type="submit" disabled={login.isPending}>
-            Anmelden
-          </Button>
-        </form>
+              <Button type="submit" loading={login.isPending}>
+                Anmelden
+              </Button>
+            </Stack>
+          </form>
+        </Stack>
       </Card>
-    </div>
+    </Center>
   )
 }

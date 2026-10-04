@@ -1,12 +1,12 @@
 /**
  * Fixed categorical chart palette. Values come from the `dataviz` skill's reference palette
- * and are validated with `scripts/validate_palette.js` against the Fluent card surfaces
+ * and are validated with `scripts/validate_palette.js` against the card surfaces
  * (#ffffff light / #292929 dark): all hard checks pass, worst adjacent CVD ΔE 9.1 light /
  * 8.4 dark. Assign hues in fixed order by entity index — never cycle a 9th generated hue.
  *
  * The contrast-vs-surface check WARNs for a few slots → charts must carry a legend or a
- * table view (the Fluent chart components show a legend by default; the reports page also
- * lists the numbers), which satisfies the "relief" requirement.
+ * table view (`ExpenseDonut` renders a legend with amounts; bar/line
+ * charts use `withLegend`), which satisfies the "relief" requirement.
  */
 const CATEGORICAL_LIGHT = [
   '#2a78d6', // blue
@@ -52,4 +52,9 @@ export function incomeColor(isDark: boolean): string {
 
 export function expenseColor(isDark: boolean): string {
   return isDark ? SEMANTIC.expense.dark : SEMANTIC.expense.light
+}
+
+/** Neutral grey for the aggregated "Weitere" slice, so it never reuses a categorical hue. */
+export function otherColor(isDark: boolean): string {
+  return isDark ? '#9a9a9a' : '#767676'
 }

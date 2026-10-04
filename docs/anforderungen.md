@@ -2,7 +2,7 @@
 
 Lebendes Anforderungsdokument für `my-finances`. Es beschreibt **was** die App
 können soll und **wie** die fachlichen Anforderungen auf den hier verwendeten
-Stack (.NET 10 Minimal API + EF Core + PostgreSQL, React + Fluent UI, Railway +
+Stack (.NET 10 Minimal API + EF Core + PostgreSQL, React + Mantine, Railway +
 Neon) abgebildet sind.
 
 > **Pflege:** Bei jeder fachlichen Erweiterung wird dieses Dokument im selben
@@ -11,7 +11,7 @@ Neon) abgebildet sind.
 > [Umsetzungsentscheidungen](#umsetzungsentscheidungen) ergänzen. Technische
 > Detailkonventionen stehen in [`AGENTS.md`](../AGENTS.md), nicht hier.
 
-Stand: 2026-09-04 · Umgesetzt: Phasen 1–3 (Datenmodell/API, Kern-UI, Dashboard &
+Stand: 2026-10-04 · UI von Fluent UI auf Mantine v9 migriert. Umgesetzt: Phasen 1–3 (Datenmodell/API, Kern-UI, Dashboard &
 Auswertungen), monatliches Sparziel mit Tagesbudget-Berechnung sowie die
 Budget-Auswertung (Ist vs. Soll je Kategorie). Offen: Phase 4 (CSV-Export-Button
 in der UI, PWA).
@@ -100,7 +100,7 @@ Mac. Betrieb möglichst kostenlos innerhalb der Free-Tiers von Railway und Neon.
 | 8.4 | Ausgaben nach Kategorie als **Donut-/Kreisdiagramm**. | ✅ Dashboard (laufender Monat) und Auswertungen (`/reports`, mit Zeitraum-Auswahl) |
 | 8.5 | Einnahmen- und Ausgaben-Verlauf über die Zeit. | ✅ gruppiertes Balkendiagramm, 12 Monate (`GET /api/reports/cashflow`) |
 | 8.6 | Kontostand-Verlauf je Konto. | ✅ Linienchart mit Konto-Auswahl (`GET /api/reports/account-balances`) |
-| 8.7 | Diagramme in Hell und Dunkel. | ✅ `@fluentui/react-charts`, Farben aus [`lib/chartColors.ts`](../web/src/lib/chartColors.ts) (validierte kategoriale Palette; Einnahmen = grün, Ausgaben = rot) |
+| 8.7 | Diagramme in Hell und Dunkel. | ✅ `@mantine/charts`, Farben aus [`lib/chartColors.ts`](../web/src/lib/chartColors.ts) (validierte kategoriale Palette; Einnahmen = grün, Ausgaben = rot) |
 | 8.8 | Dashboard-Tagesbudget: „frei verfügbar" = (Einnahmen − Ausgaben des Monats, **je inkl. der für den Restmonat fälligen aktiven Vorlagen**) − Sparziel des Monats; „täglich verfügbar" = frei verfügbar / verbleibende Tage (**ab morgen** bis Monatsende; am Monatsletzten „–"). | ✅ Feld `dailyBudget` in `GET /api/dashboard` |
 | 8.9 | Budget-Auswertung: Ist-Ausgaben je Ausgaben-Kategorie gegen das Monatsbudget, mit Fortschrittsbalken (grün < 80 %, gelb 80–100 %, rot > 100 %) und explizitem Hinweis „Budget überschritten". Im mehrmonatigen Zeitraum wird das Monatsbudget hochskaliert (`Budget × berührte Kalendermonate`). | ✅ `GET /api/reports/budgets` (Query `from`/`to`), Karte „Budgets" auf `/reports` mit eigener Zeitraum-Auswahl (Default „Dieser Monat"). Kategorien ohne Budget, aber mit Ausgaben im Zeitraum erscheinen als „kein Budget"; Kategorien ohne Budget **und** ohne Ausgaben werden nicht gelistet. Budget 0 zählt als „kein Budget". |
 
@@ -118,12 +118,12 @@ Mac. Betrieb möglichst kostenlos innerhalb der Free-Tiers von Railway und Neon.
 | # | Anforderung | Status |
 |---|---|---|
 | 10.1 | Deutsche Benutzeroberfläche durchgängig (Labels, Fehlermeldungen, Kategorien). | ✅ |
-| 10.2 | Frontend: React + Vite + TypeScript, Fluent UI v9, TanStack Router/Query, Orval-Client. | ✅ |
+| 10.2 | Frontend: React + Vite + TypeScript, Mantine v9, TanStack Router/Query, Orval-Client. | ✅ |
 | 10.3 | Backend: .NET 10 Minimal API, EF Core + Npgsql, PostgreSQL. | ✅ |
 | 10.4 | Ein Deployment, ein Origin: die API liefert `/api/*` **und** das gebaute Frontend aus `wwwroot/`. | ✅ |
 | 10.5 | Hosting Railway (Docker), Datenbank Neon – beides im Free-Tier. | ✅ |
 | 10.6 | PWA: installierbar auf iPhone/iPad/Mac (eigenes Icon, Vollbild), **kein** Offline-Datencaching. | ⏳ Phase 4 |
-| 10.7 | Diagramm-Bibliothek `@fluentui/react-charts`. | ✅ |
+| 10.7 | Diagramm-Bibliothek `@mantine/charts` (Recharts). | ✅ |
 
 ## 11. Routen (Frontend)
 
@@ -191,10 +191,11 @@ bzw. konkretisiert – jeweils mit dem Nutzer abgestimmt:
 | Sparziel | Eigene Tabelle `MonthlySavingsGoal` je (Jahr, Monat) – bewusst abweichend vom Kategorie-Monatsbudget, weil der Nutzer monatsgenaue Sparziele will. Betrag 0 ⇒ Zeile wird gelöscht (kein separater DELETE-Endpunkt). |
 | Tagesbudget-Basis | „frei verfügbar" = verbuchte Einnahmen − verbuchte Ausgaben des Monats, **zzgl. der für den Restmonat (Fälligkeit > heute) noch fälligen aktiven Vorlagen**, minus Sparziel. Verbleibende Tage zählen **ab morgen** (heute gilt als abgeschlossen). Reiner Helper `RecurringSchedule.OccurrenceInMonth` + Tests. |
 | CSV-Export | Server-Endpunkt (`text/csv`), nicht clientseitig erzeugt. |
-| Budget-Auswertung | Eigene Zeitraum-Auswahl je Karte (dieselben Optionen wie „Ausgaben nach Kategorie", Default „Dieser Monat") – bewusst nicht an den Selektor der Nachbarkarte gekoppelt, damit beide unabhängig bedienbar bleiben. Bei mehreren Monaten wird das (weiterhin monatliche) `MonthlyBudget` mit der Zahl der berührten Kalendermonate multipliziert (angebrochene Monate zählen voll). Reiner Helper `Reports.BudgetPeriod.MonthsInclusive` + Tests. Zeitraum „Gesamt": Skalierung von der frühesten verbuchten Ausgabe **bis heute** (grobe Lebenszeit-Summe). Budget ≤ 0 gilt als „kein Budget" (DTO liefert `null`). Antwort ist ein Objekt `{ months, lines }` (nicht wie die übrigen Reports ein Array), weil der Monats-Skalar gebraucht wird. Ampelfarben aus den Fluent-`ProgressBar`-Status (`success`/`warning`/`error`), nicht aus `chartColors.ts` – das sind Komponenten-Zustände, keine kategorialen Chart-Farben. |
+| Budget-Auswertung | Eigene Zeitraum-Auswahl je Karte (dieselben Optionen wie „Ausgaben nach Kategorie", Default „Dieser Monat") – bewusst nicht an den Selektor der Nachbarkarte gekoppelt, damit beide unabhängig bedienbar bleiben. Bei mehreren Monaten wird das (weiterhin monatliche) `MonthlyBudget` mit der Zahl der berührten Kalendermonate multipliziert (angebrochene Monate zählen voll). Reiner Helper `Reports.BudgetPeriod.MonthsInclusive` + Tests. Zeitraum „Gesamt": Skalierung von der frühesten verbuchten Ausgabe **bis heute** (grobe Lebenszeit-Summe). Budget ≤ 0 gilt als „kein Budget" (DTO liefert `null`). Antwort ist ein Objekt `{ months, lines }` (nicht wie die übrigen Reports ein Array), weil der Monats-Skalar gebraucht wird. Ampelfarben aus den Mantine-`Progress`-Farben (`green`/`yellow`/`red`), nicht aus `chartColors.ts` – das sind Komponenten-Zustände, keine kategorialen Chart-Farben. |
 | Migrationen | Eine frische `InitialCreate`; die generischen `Account`/`Transaction`-Entitäten des Ausgangsstands wurden gelöscht. |
 | Währung | Kein Währungsfeld – ausschließlich Euro. |
-| Diagrammfarben | Feste, mit der `dataviz`-Skill validierte kategoriale Palette in `lib/chartColors.ts`; nicht Fluents Standard-Palette (fällt beim CVD-Check durch). |
+| UI-Bibliothek | Umstieg von Fluent UI v9 auf Mantine v9 (`@mantine/core`, `@mantine/charts`). Datumsfelder bleiben native `type="date"`-Inputs (kein `@mantine/dates`/dayjs). Beträge sind weiter Texteingaben mit Komma-Parser (`parseAmount`). Hell/Dunkel folgt dem OS (`defaultColorScheme="auto"`). Tabellen über die gemeinsame `DataTable`-Komponente; Donut-Diagramme mit eigener Legende (`ExpenseDonut`), da Mantines `DonutChart` keine hat. |
+| Diagrammfarben | Feste, mit der `dataviz`-Skill validierte kategoriale Palette in `lib/chartColors.ts`; nicht Fluents Standard-Palette (fällt beim CVD-Check durch). Die Sammel-Scheibe „Weitere“ nutzt ein neutrales Grau (`otherColor`), nie eine zyklisch wiederholte Kategorienfarbe. |
 | Statische Web-Assets | `StaticWebAssetsEnabled=false` – das Frontend ist ein reiner Vite-Build aus dem physischen `wwwroot/`. |
 
 ## 15. Offene Punkte / nächste Schritte

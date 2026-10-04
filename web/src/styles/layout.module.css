@@ -1,0 +1,21 @@
+.header {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  background-color: var(--mantine-color-body);
+}
+
+.link {
+  color: var(--mantine-color-dimmed);
+  font-weight: 600;
+  text-decoration: none;
+
+  &[data-active] {
+    color: var(--mantine-primary-color-filled);
+  }
+}
+
+.main {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  padding: var(--mantine-spacing-lg);
+}

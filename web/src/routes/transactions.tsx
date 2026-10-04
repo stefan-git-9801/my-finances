@@ -1,33 +1,8 @@
 import { type FormEvent, useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Badge,
-  Body1,
-  Button,
-  DataGrid,
-  DataGridBody,
-  DataGridCell,
-  DataGridHeader,
-  DataGridHeaderCell,
-  DataGridRow,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  Dropdown,
-  Field,
-  Input,
-  MessageBar,
-  Option,
-  Spinner,
-  createTableColumn,
-  makeStyles,
-  tokens,
-} from '@fluentui/react-components'
-import type { TableColumnDefinition } from '@fluentui/react-components'
+import { Alert, Badge, Button, Select, SimpleGrid, Text, TextInput } from '@mantine/core'
+import { NEGATIVE_TEXT, POSITIVE_TEXT } from '../lib/colors'
 import { useGetAccounts } from '../api/generated/accounts/accounts'
 import { useGetCategories } from '../api/generated/categories/categories'
 import {
@@ -45,22 +20,12 @@ import { formatDate, formatEuro, parseAmount } from '../lib/format'
 import { errorMessage } from '../lib/errors'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DataTable, type Column } from '../components/DataTable'
+import { FormModal } from '../components/FormModal'
+import { Loading } from '../components/Loading'
+import { RowActions } from '../components/RowActions'
 
 export const Route = createFileRoute('/transactions')({ component: TransactionsPage })
-
-const useStyles = makeStyles({
-  filters: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '12px',
-    marginBottom: '16px',
-  },
-  filter: { minWidth: '150px' },
-  form: { display: 'flex', flexDirection: 'column', rowGap: '12px' },
-  actions: { display: 'flex', gap: '8px' },
-  income: { color: tokens.colorPaletteGreenForeground1 },
-  expense: { color: tokens.colorPaletteRedForeground1 },
-})
 
 const today = () => new Date().toISOString().slice(0, 10)
 const ALL = '__all__'
@@ -84,7 +49,6 @@ const emptyForm = (): FormState => ({
 })
 
 function TransactionsPage() {
-  const styles = useStyles()
   const queryClient = useQueryClient()
 
   const accounts = useGetAccounts()
@@ -195,60 +159,47 @@ function TransactionsPage() {
     }
   }
 
-  const columns: TableColumnDefinition<TransactionResponse>[] = [
-    createTableColumn({
-      columnId: 'bookedOn',
-      renderHeaderCell: () => 'Datum',
-      renderCell: (t) => formatDate(t.bookedOn),
-    }),
-    createTableColumn({
-      columnId: 'category',
-      renderHeaderCell: () => 'Kategorie',
-      renderCell: (t) => (
+  const typeOptions = Object.values(TransactionType).map((t) => ({
+    value: t,
+    label: transactionTypeLabel[t],
+  }))
+  const accountOptions = (accounts.data ?? []).map((a) => ({ value: a.id, label: a.name }))
+  const categoryOptions = (categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))
+
+  const columns: Column<TransactionResponse>[] = [
+    { key: 'bookedOn', header: 'Datum', render: (t) => formatDate(t.bookedOn) },
+    {
+      key: 'category',
+      header: 'Kategorie',
+      render: (t) => (
         <>
           {categoryName.get(t.categoryId) ?? '—'}
           {t.recurringTemplateId && (
-            <Badge appearance="tint" color="brand" style={{ marginLeft: 6 }}>
+            <Badge variant="light" ml={6}>
               Vorlage
             </Badge>
           )}
         </>
       ),
-    }),
-    createTableColumn({
-      columnId: 'account',
-      renderHeaderCell: () => 'Konto',
-      renderCell: (t) => accountName.get(t.accountId) ?? '—',
-    }),
-    createTableColumn({
-      columnId: 'note',
-      renderHeaderCell: () => 'Notiz',
-      renderCell: (t) => t.note ?? '',
-    }),
-    createTableColumn({
-      columnId: 'amount',
-      renderHeaderCell: () => 'Betrag',
-      renderCell: (t) => (
-        <span className={t.type === TransactionType.Expense ? styles.expense : styles.income}>
+    },
+    { key: 'account', header: 'Konto', render: (t) => accountName.get(t.accountId) ?? '—' },
+    { key: 'note', header: 'Notiz', render: (t) => t.note ?? '' },
+    {
+      key: 'amount',
+      header: 'Betrag',
+      align: 'right',
+      render: (t) => (
+        <Text span inherit c={t.type === TransactionType.Expense ? NEGATIVE_TEXT : POSITIVE_TEXT}>
           {t.type === TransactionType.Expense ? '−' : '+'}
           {formatEuro(t.amount)}
-        </span>
+        </Text>
       ),
-    }),
-    createTableColumn({
-      columnId: 'actions',
-      renderHeaderCell: () => '',
-      renderCell: (t) => (
-        <div className={styles.actions}>
-          <Button size="small" onClick={() => openEdit(t)}>
-            Bearbeiten
-          </Button>
-          <Button size="small" onClick={() => setToDelete(t)}>
-            Löschen
-          </Button>
-        </div>
-      ),
-    }),
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (t) => <RowActions onEdit={() => openEdit(t)} onDelete={() => setToDelete(t)} />,
+    },
   ]
 
   const parsedAmount = parseAmount(form.amount)
@@ -263,178 +214,125 @@ function TransactionsPage() {
   return (
     <>
       <PageHeader title="Buchungen">
-        <Button appearance="primary" onClick={openCreate} disabled={noPrerequisites}>
+        <Button onClick={openCreate} disabled={noPrerequisites}>
           Neue Buchung
         </Button>
       </PageHeader>
 
-      <div className={styles.filters}>
-        <Field label="Von" className={styles.filter}>
-          <Input
-            type="date"
-            value={filters.from}
-            onChange={(_, d) => setFilters((f) => ({ ...f, from: d.value }))}
-          />
-        </Field>
-        <Field label="Bis" className={styles.filter}>
-          <Input
-            type="date"
-            value={filters.to}
-            onChange={(_, d) => setFilters((f) => ({ ...f, to: d.value }))}
-          />
-        </Field>
-        <Field label="Konto" className={styles.filter}>
-          <Dropdown
-            selectedOptions={[filters.accountId]}
-            value={filters.accountId === ALL ? 'Alle' : (accountName.get(filters.accountId) ?? '')}
-            onOptionSelect={(_, d) => setFilters((f) => ({ ...f, accountId: d.optionValue ?? ALL }))}
-          >
-            <Option value={ALL}>Alle</Option>
-            {accounts.data?.map((a) => (
-              <Option key={a.id} value={a.id}>
-                {a.name}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-        <Field label="Kategorie" className={styles.filter}>
-          <Dropdown
-            selectedOptions={[filters.categoryId]}
-            value={filters.categoryId === ALL ? 'Alle' : (categoryName.get(filters.categoryId) ?? '')}
-            onOptionSelect={(_, d) => setFilters((f) => ({ ...f, categoryId: d.optionValue ?? ALL }))}
-          >
-            <Option value={ALL}>Alle</Option>
-            {categories.data?.map((c) => (
-              <Option key={c.id} value={c.id}>
-                {c.name}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-        <Field label="Art" className={styles.filter}>
-          <Dropdown
-            selectedOptions={[filters.type]}
-            value={filters.type === ALL ? 'Alle' : transactionTypeLabel[filters.type as TransactionType]}
-            onOptionSelect={(_, d) => setFilters((f) => ({ ...f, type: d.optionValue ?? ALL }))}
-          >
-            <Option value={ALL}>Alle</Option>
-            {Object.values(TransactionType).map((t) => (
-              <Option key={t} value={t}>
-                {transactionTypeLabel[t]}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-      </div>
+      <SimpleGrid cols={{ base: 1, xs: 2, sm: 3 }} mb="md">
+        <TextInput
+          label="Von"
+          type="date"
+          value={filters.from}
+          onChange={(e) => {
+            const from = e.currentTarget.value
+            setFilters((f) => ({ ...f, from }))
+          }}
+        />
+        <TextInput
+          label="Bis"
+          type="date"
+          value={filters.to}
+          onChange={(e) => {
+            const to = e.currentTarget.value
+            setFilters((f) => ({ ...f, to }))
+          }}
+        />
+        <Select
+          label="Konto"
+          allowDeselect={false}
+          data={[{ value: ALL, label: 'Alle' }, ...accountOptions]}
+          value={filters.accountId}
+          onChange={(v) => setFilters((f) => ({ ...f, accountId: v ?? ALL }))}
+        />
+        <Select
+          label="Kategorie"
+          allowDeselect={false}
+          data={[{ value: ALL, label: 'Alle' }, ...categoryOptions]}
+          value={filters.categoryId}
+          onChange={(v) => setFilters((f) => ({ ...f, categoryId: v ?? ALL }))}
+        />
+        <Select
+          label="Art"
+          allowDeselect={false}
+          data={[{ value: ALL, label: 'Alle' }, ...typeOptions]}
+          value={filters.type}
+          onChange={(v) => setFilters((f) => ({ ...f, type: v ?? ALL }))}
+        />
+      </SimpleGrid>
 
       {transactions.isPending ? (
-        <Spinner label="Buchungen werden geladen …" />
+        <Loading label="Buchungen werden geladen …" />
       ) : transactions.isError ? (
-        <MessageBar intent="error">Buchungen konnten nicht geladen werden.</MessageBar>
+        <Alert color="red">Buchungen konnten nicht geladen werden.</Alert>
       ) : transactions.data.length === 0 ? (
-        <Body1>Keine Buchungen für die aktuelle Auswahl.</Body1>
+        <Text>Keine Buchungen für die aktuelle Auswahl.</Text>
       ) : (
-        <DataGrid items={transactions.data} columns={columns} getRowId={(t) => t.id}>
-          <DataGridHeader>
-            <DataGridRow>
-              {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
-            </DataGridRow>
-          </DataGridHeader>
-          <DataGridBody<TransactionResponse>>
-            {({ item, rowId }) => (
-              <DataGridRow<TransactionResponse> key={rowId}>
-                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
-              </DataGridRow>
-            )}
-          </DataGridBody>
-        </DataGrid>
+        <DataTable rows={transactions.data} columns={columns} getRowId={(t) => t.id} />
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={(_, d) => setDialogOpen(d.open)}>
-        <DialogSurface>
-          <form onSubmit={onSubmit}>
-            <DialogBody>
-              <DialogTitle>{editing ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
-              <DialogContent className={styles.form}>
-                <Field label="Art" required>
-                  <Dropdown
-                    selectedOptions={[form.type]}
-                    value={transactionTypeLabel[form.type]}
-                    onOptionSelect={(_, d) =>
-                      setForm((f) => ({ ...f, type: d.optionValue as TransactionType }))
-                    }
-                  >
-                    {Object.values(TransactionType).map((t) => (
-                      <Option key={t} value={t}>
-                        {transactionTypeLabel[t]}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </Field>
-                <Field label="Konto" required>
-                  <Dropdown
-                    placeholder="Konto wählen"
-                    selectedOptions={form.accountId ? [form.accountId] : []}
-                    value={accountName.get(form.accountId) ?? ''}
-                    onOptionSelect={(_, d) => setForm((f) => ({ ...f, accountId: d.optionValue ?? '' }))}
-                  >
-                    {accounts.data?.map((a) => (
-                      <Option key={a.id} value={a.id}>
-                        {a.name}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </Field>
-                <Field label="Kategorie" required>
-                  <Dropdown
-                    placeholder="Kategorie wählen"
-                    selectedOptions={form.categoryId ? [form.categoryId] : []}
-                    value={categoryName.get(form.categoryId) ?? ''}
-                    onOptionSelect={(_, d) => setForm((f) => ({ ...f, categoryId: d.optionValue ?? '' }))}
-                  >
-                    {categories.data?.map((c) => (
-                      <Option key={c.id} value={c.id}>
-                        {c.name}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </Field>
-                <Field label="Betrag" required>
-                  <Input
-                    value={form.amount}
-                    onChange={(_, d) => setForm((f) => ({ ...f, amount: d.value }))}
-                    placeholder="19,99"
-                  />
-                </Field>
-                <Field label="Notiz">
-                  <Input
-                    value={form.note}
-                    onChange={(_, d) => setForm((f) => ({ ...f, note: d.value }))}
-                  />
-                </Field>
-                <Field label="Datum" required>
-                  <Input
-                    type="date"
-                    value={form.bookedOn}
-                    onChange={(_, d) => setForm((f) => ({ ...f, bookedOn: d.value }))}
-                  />
-                </Field>
-                {saveError && (
-                  <MessageBar intent="error">{errorMessage(saveError, 'Speichern fehlgeschlagen.')}</MessageBar>
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button appearance="secondary" type="button" onClick={() => setDialogOpen(false)}>
-                  Abbrechen
-                </Button>
-                <Button appearance="primary" type="submit" disabled={saving || !canSubmit}>
-                  Speichern
-                </Button>
-              </DialogActions>
-            </DialogBody>
-          </form>
-        </DialogSurface>
-      </Dialog>
+      <FormModal
+        opened={dialogOpen}
+        title={editing ? 'Buchung bearbeiten' : 'Neue Buchung'}
+        error={saveError ? errorMessage(saveError, 'Speichern fehlgeschlagen.') : null}
+        saving={saving}
+        canSubmit={canSubmit}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={onSubmit}
+      >
+        <Select
+          label="Art"
+          required
+          allowDeselect={false}
+          data={typeOptions}
+          value={form.type}
+          onChange={(v) => v && setForm((f) => ({ ...f, type: v as TransactionType }))}
+        />
+        <Select
+          label="Konto"
+          required
+          placeholder="Konto wählen"
+          data={accountOptions}
+          value={form.accountId || null}
+          onChange={(v) => setForm((f) => ({ ...f, accountId: v ?? '' }))}
+        />
+        <Select
+          label="Kategorie"
+          required
+          placeholder="Kategorie wählen"
+          data={categoryOptions}
+          value={form.categoryId || null}
+          onChange={(v) => setForm((f) => ({ ...f, categoryId: v ?? '' }))}
+        />
+        <TextInput
+          label="Betrag"
+          required
+          value={form.amount}
+          onChange={(e) => {
+            const amount = e.currentTarget.value
+            setForm((f) => ({ ...f, amount }))
+          }}
+          placeholder="19,99"
+        />
+        <TextInput
+          label="Notiz"
+          value={form.note}
+          onChange={(e) => {
+            const note = e.currentTarget.value
+            setForm((f) => ({ ...f, note }))
+          }}
+        />
+        <TextInput
+          label="Datum"
+          type="date"
+          required
+          value={form.bookedOn}
+          onChange={(e) => {
+            const bookedOn = e.currentTarget.value
+            setForm((f) => ({ ...f, bookedOn }))
+          }}
+        />
+      </FormModal>
 
       <ConfirmDialog
         open={toDelete !== null}

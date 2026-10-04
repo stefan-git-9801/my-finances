@@ -1,10 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { FluentProvider } from '@fluentui/react-components'
+import { MantineProvider } from '@mantine/core'
+import '@mantine/core/styles.css'
+import '@mantine/charts/styles.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
-import { useAppTheme } from './theme'
+import { theme } from './theme'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -30,14 +32,12 @@ declare module '@tanstack/react-router' {
 }
 
 function App() {
-  const theme = useAppTheme()
-
   return (
-    <FluentProvider theme={theme} style={{ height: '100%' }}>
+    <MantineProvider theme={theme} defaultColorScheme="auto">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
-    </FluentProvider>
+    </MantineProvider>
   )
 }
 
