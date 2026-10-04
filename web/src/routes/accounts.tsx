@@ -1,31 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Body1,
-  Button,
-  DataGrid,
-  DataGridBody,
-  DataGridCell,
-  DataGridHeader,
-  DataGridHeaderCell,
-  DataGridRow,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  Dropdown,
-  Field,
-  Input,
-  MessageBar,
-  Option,
-  Spinner,
-  createTableColumn,
-  makeStyles,
-} from '@fluentui/react-components'
-import type { TableColumnDefinition } from '@fluentui/react-components'
+import { Alert, Button, Select, Text, TextInput } from '@mantine/core'
 import {
   getGetAccountsQueryKey,
   useCreateAccount,
@@ -40,20 +16,18 @@ import { formatEuro, parseAmount } from '../lib/format'
 import { errorMessage } from '../lib/errors'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DataTable, type Column } from '../components/DataTable'
+import { FormModal } from '../components/FormModal'
+import { Loading } from '../components/Loading'
+import { RowActions } from '../components/RowActions'
 
 export const Route = createFileRoute('/accounts')({ component: AccountsPage })
-
-const useStyles = makeStyles({
-  form: { display: 'flex', flexDirection: 'column', rowGap: '12px' },
-  actions: { display: 'flex', gap: '8px' },
-})
 
 type FormState = { name: string; type: AccountType; startingBalance: string }
 
 const emptyForm: FormState = { name: '', type: AccountType.Checking, startingBalance: '0' }
 
 function AccountsPage() {
-  const styles = useStyles()
   const queryClient = useQueryClient()
   const accounts = useGetAccounts()
 
@@ -122,124 +96,81 @@ function AccountsPage() {
     }
   }
 
-  const columns: TableColumnDefinition<AccountResponse>[] = [
-    createTableColumn({
-      columnId: 'name',
-      renderHeaderCell: () => 'Name',
-      renderCell: (a) => a.name,
-    }),
-    createTableColumn({
-      columnId: 'type',
-      renderHeaderCell: () => 'Typ',
-      renderCell: (a) => accountTypeLabel[a.type],
-    }),
-    createTableColumn({
-      columnId: 'startingBalance',
-      renderHeaderCell: () => 'Startsaldo',
-      renderCell: (a) => formatEuro(a.startingBalance),
-    }),
-    createTableColumn({
-      columnId: 'currentBalance',
-      renderHeaderCell: () => 'Aktueller Saldo',
-      renderCell: (a) => formatEuro(a.currentBalance),
-    }),
-    createTableColumn({
-      columnId: 'actions',
-      renderHeaderCell: () => '',
-      renderCell: (a) => (
-        <div className={styles.actions}>
-          <Button size="small" onClick={() => openEdit(a)}>
-            Bearbeiten
-          </Button>
-          <Button size="small" onClick={() => setToDelete(a)}>
-            Löschen
-          </Button>
-        </div>
-      ),
-    }),
+  const columns: Column<AccountResponse>[] = [
+    { key: 'name', header: 'Name', render: (a) => a.name },
+    { key: 'type', header: 'Typ', render: (a) => accountTypeLabel[a.type] },
+    {
+      key: 'startingBalance',
+      header: 'Startsaldo',
+      render: (a) => formatEuro(a.startingBalance),
+      align: 'right',
+    },
+    {
+      key: 'currentBalance',
+      header: 'Aktueller Saldo',
+      render: (a) => formatEuro(a.currentBalance),
+      align: 'right',
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (a) => <RowActions onEdit={() => openEdit(a)} onDelete={() => setToDelete(a)} />,
+    },
   ]
 
   return (
     <>
       <PageHeader title="Konten">
-        <Button appearance="primary" onClick={openCreate}>
-          Neues Konto
-        </Button>
+        <Button onClick={openCreate}>Neues Konto</Button>
       </PageHeader>
 
       {accounts.isPending ? (
-        <Spinner label="Konten werden geladen …" />
+        <Loading label="Konten werden geladen …" />
       ) : accounts.isError ? (
-        <MessageBar intent="error">Konten konnten nicht geladen werden.</MessageBar>
+        <Alert color="red">Konten konnten nicht geladen werden.</Alert>
       ) : accounts.data.length === 0 ? (
-        <Body1>Noch keine Konten. Lege oben dein erstes Konto an.</Body1>
+        <Text>Noch keine Konten. Lege oben dein erstes Konto an.</Text>
       ) : (
-        <DataGrid items={accounts.data} columns={columns} getRowId={(a) => a.id}>
-          <DataGridHeader>
-            <DataGridRow>
-              {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
-            </DataGridRow>
-          </DataGridHeader>
-          <DataGridBody<AccountResponse>>
-            {({ item, rowId }) => (
-              <DataGridRow<AccountResponse> key={rowId}>
-                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
-              </DataGridRow>
-            )}
-          </DataGridBody>
-        </DataGrid>
+        <DataTable rows={accounts.data} columns={columns} getRowId={(a) => a.id} />
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={(_, d) => setDialogOpen(d.open)}>
-        <DialogSurface>
-          <form onSubmit={onSubmit}>
-            <DialogBody>
-              <DialogTitle>{editing ? 'Konto bearbeiten' : 'Neues Konto'}</DialogTitle>
-              <DialogContent className={styles.form}>
-                <Field label="Name" required>
-                  <Input
-                    value={form.name}
-                    onChange={(_, d) => setForm((f) => ({ ...f, name: d.value }))}
-                  />
-                </Field>
-                <Field label="Typ" required>
-                  <Dropdown
-                    selectedOptions={[form.type]}
-                    value={accountTypeLabel[form.type]}
-                    onOptionSelect={(_, d) =>
-                      setForm((f) => ({ ...f, type: d.optionValue as AccountType }))
-                    }
-                  >
-                    {accountTypeOptions.map((t) => (
-                      <Option key={t} value={t}>
-                        {accountTypeLabel[t]}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </Field>
-                <Field label="Startsaldo" required>
-                  <Input
-                    value={form.startingBalance}
-                    onChange={(_, d) => setForm((f) => ({ ...f, startingBalance: d.value }))}
-                    placeholder="0,00"
-                  />
-                </Field>
-                {saveError && (
-                  <MessageBar intent="error">{errorMessage(saveError, 'Speichern fehlgeschlagen.')}</MessageBar>
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button appearance="secondary" type="button" onClick={() => setDialogOpen(false)}>
-                  Abbrechen
-                </Button>
-                <Button appearance="primary" type="submit" disabled={saving || form.name.trim() === ''}>
-                  Speichern
-                </Button>
-              </DialogActions>
-            </DialogBody>
-          </form>
-        </DialogSurface>
-      </Dialog>
+      <FormModal
+        opened={dialogOpen}
+        title={editing ? 'Konto bearbeiten' : 'Neues Konto'}
+        error={saveError ? errorMessage(saveError, 'Speichern fehlgeschlagen.') : null}
+        saving={saving}
+        canSubmit={form.name.trim() !== ''}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={onSubmit}
+      >
+        <TextInput
+          label="Name"
+          required
+          value={form.name}
+          onChange={(e) => {
+            const name = e.currentTarget.value
+            setForm((f) => ({ ...f, name }))
+          }}
+        />
+        <Select
+          label="Typ"
+          required
+          allowDeselect={false}
+          data={accountTypeOptions.map((t) => ({ value: t, label: accountTypeLabel[t] }))}
+          value={form.type}
+          onChange={(v) => v && setForm((f) => ({ ...f, type: v as AccountType }))}
+        />
+        <TextInput
+          label="Startsaldo"
+          required
+          value={form.startingBalance}
+          onChange={(e) => {
+            const startingBalance = e.currentTarget.value
+            setForm((f) => ({ ...f, startingBalance }))
+          }}
+          placeholder="0,00"
+        />
+      </FormModal>
 
       <ConfirmDialog
         open={toDelete !== null}

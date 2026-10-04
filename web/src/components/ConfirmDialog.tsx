@@ -1,13 +1,4 @@
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  MessageBar,
-} from '@fluentui/react-components'
+import { Alert, Button, Group, Modal, Text } from '@mantine/core'
 
 type Props = {
   open: boolean
@@ -32,28 +23,21 @@ export function ConfirmDialog({
   onOpenChange,
 }: Props) {
   return (
-    <Dialog open={open} onOpenChange={(_, d) => onOpenChange(d.open)}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogContent>
-            {message}
-            {error && (
-              <MessageBar intent="error" style={{ marginTop: 12 }}>
-                {error}
-              </MessageBar>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button appearance="secondary" onClick={() => onOpenChange(false)}>
-              Abbrechen
-            </Button>
-            <Button appearance="primary" onClick={onConfirm} disabled={pending}>
-              {confirmLabel}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+    <Modal opened={open} onClose={() => onOpenChange(false)} title={title} centered>
+      <Text>{message}</Text>
+      {error && (
+        <Alert color="red" mt="md">
+          {error}
+        </Alert>
+      )}
+      <Group justify="flex-end" mt="lg">
+        <Button variant="default" onClick={() => onOpenChange(false)}>
+          Abbrechen
+        </Button>
+        <Button color="red" onClick={onConfirm} loading={pending}>
+          {confirmLabel}
+        </Button>
+      </Group>
+    </Modal>
   )
 }

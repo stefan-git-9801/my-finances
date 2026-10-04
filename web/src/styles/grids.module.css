@@ -1,0 +1,17 @@
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--mantine-spacing-md);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--mantine-spacing-md);
+  align-items: start;
+}
+
+.amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

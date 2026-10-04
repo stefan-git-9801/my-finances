@@ -2,7 +2,7 @@
 
 Private Finanz-WebApp als Lernprojekt.
 
-**Stack:** React + Fluent UI v9 + TanStack Router/Query, API-Client generiert mit Orval ·
+**Stack:** React + Mantine v9 + TanStack Router/Query, API-Client generiert mit Orval ·
 .NET 10 Minimal API + EF Core + PostgreSQL · lokal in Podman · Hosting auf Railway,
 Datenbank bei Neon.
 

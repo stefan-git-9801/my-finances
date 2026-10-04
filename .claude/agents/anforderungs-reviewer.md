@@ -29,7 +29,7 @@ ersten Mal – prüfe unvoreingenommen, nicht wohlwollend.
 - DTO-Records + `ToResponse()`, keine EF-Entität nach außen, MiniValidation.
 - Generierter Code (`web/src/api/generated/`, `backend/openapi/`) nicht von Hand
   editiert; nach API-Änderung neu erzeugt und eingecheckt (sonst CI rot).
-- Frontend: Fluent v9 + `makeStyles`, Diagrammfarben nur aus `lib/chartColors.ts`.
+- Frontend: Mantine v9 (Style-Props oder CSS-Module in `web/src/styles/`), Diagrammfarben nur aus `lib/chartColors.ts`.
 - EF-`GroupBy`-Fallstrick auf Npgsql; Startup-Migrations-Guard für `GetDocument.Insider`.
 - Migrationen im richtigen Projekt (`MyFinances.Data`).
 

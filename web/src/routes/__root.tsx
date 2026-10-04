@@ -1,20 +1,7 @@
-import {
-  Link,
-  Navigate,
-  Outlet,
-  createRootRoute,
-  useRouterState,
-} from '@tanstack/react-router'
-import {
-  Body1,
-  Button,
-  Spinner,
-  Title3,
-  makeStyles,
-  shorthands,
-  tokens,
-} from '@fluentui/react-components'
+import { Link, Navigate, Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
+import { Anchor, Box, Button, Center, Group, Loader, Text, Title } from '@mantine/core'
 import { useCurrentUser, useLogout } from '../lib/auth'
+import classes from '../styles/layout.module.css'
 
 export const Route = createRootRoute({ component: RootLayout })
 
@@ -28,53 +15,7 @@ const navItems = [
   { to: '/reports', label: 'Auswertungen' },
 ] as const
 
-const useStyles = makeStyles({
-  shell: {
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100%',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '16px',
-    ...shorthands.padding('12px', '24px'),
-    ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke2),
-    backgroundColor: tokens.colorNeutralBackground2,
-    flexWrap: 'wrap',
-  },
-  nav: {
-    display: 'flex',
-    alignItems: 'center',
-    columnGap: '18px',
-    rowGap: '8px',
-    flexWrap: 'wrap',
-  },
-  link: {
-    color: tokens.colorNeutralForeground2,
-    textDecorationLine: 'none',
-    fontWeight: tokens.fontWeightSemibold,
-  },
-  activeLink: {
-    color: tokens.colorBrandForeground1,
-  },
-  main: {
-    flexGrow: 1,
-    width: '100%',
-    maxWidth: '960px',
-    marginInline: 'auto',
-    ...shorthands.padding('24px'),
-  },
-  center: {
-    display: 'grid',
-    placeItems: 'center',
-    minHeight: '100%',
-  },
-})
-
 function RootLayout() {
-  const styles = useStyles()
   const { data: user, isPending, isError } = useCurrentUser()
   const logout = useLogout()
 
@@ -83,9 +24,12 @@ function RootLayout() {
 
   if (isPending) {
     return (
-      <div className={styles.center}>
-        <Spinner label="Lädt …" />
-      </div>
+      <Center h="100%">
+        <Group gap="sm">
+          <Loader size="sm" />
+          <Text>Lädt …</Text>
+        </Group>
+      </Center>
     )
   }
 
@@ -103,32 +47,33 @@ function RootLayout() {
   }
 
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <div className={styles.nav}>
-          <Title3>my-finances</Title3>
+    <Box mih="100%" style={{ display: 'flex', flexDirection: 'column' }}>
+      <Group component="header" className={classes.header} justify="space-between" px="lg" py="sm">
+        <Group gap="lg">
+          <Title order={3}>my-finances</Title>
           {navItems.map((item) => (
-            <Link
+            <Anchor
               key={item.to}
+              component={Link}
               to={item.to}
-              className={styles.link}
-              activeProps={{ className: `${styles.link} ${styles.activeLink}` }}
+              className={classes.link}
+              activeProps={{ 'data-active': true }}
               activeOptions={'exact' in item && item.exact ? { exact: true } : undefined}
             >
               {item.label}
-            </Link>
+            </Anchor>
           ))}
-        </div>
-        <div className={styles.nav}>
-          <Body1>{user.email}</Body1>
-          <Button appearance="subtle" onClick={() => void logout()}>
+        </Group>
+        <Group gap="md">
+          <Text size="sm">{user.email}</Text>
+          <Button variant="subtle" onClick={() => void logout()}>
             Abmelden
           </Button>
-        </div>
-      </header>
-      <main className={styles.main}>
+        </Group>
+      </Group>
+      <main className={classes.main}>
         <Outlet />
       </main>
-    </div>
+    </Box>
   )
 }

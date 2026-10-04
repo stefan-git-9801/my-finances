@@ -31,7 +31,7 @@ Gib das Ergebnis als kurze, strukturierte Analyse aus. **Stopp** – warte auf �
   (`git checkout main && git pull && git checkout -b <typ>/<kurzname>`). Nie direkt
   auf `main` oder einem bestehenden Feature-Branch entwickeln.
 - Setze die in Phase 1 abgestimmte Lösung um. Halte dich an die Konventionen in
-  `AGENTS.md` (Minimal API, `TypedResults`, DTO-Records, MiniValidation, Fluent v9,
+  `AGENTS.md` (Minimal API, `TypedResults`, DTO-Records, MiniValidation, Mantine v9,
   `chartColors.ts`, kein Editieren von generiertem Code).
 - Bei API-/DTO-Änderungen: `dotnet build backend/src/MyFinances.Api`, dann
   `cd web && pnpm generate` – beide Artefakte einchecken.
