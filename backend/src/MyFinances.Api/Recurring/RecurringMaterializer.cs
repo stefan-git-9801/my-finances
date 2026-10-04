@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using MyFinances.Data;
 using MyFinances.Data.Entities;
 using MyFinances.Data.Recurring;
@@ -8,11 +9,27 @@ namespace MyFinances.Api.Recurring;
 /// <summary>
 /// Turns due months of every active <see cref="RecurringTemplate"/> into real <see cref="Transaction"/>
 /// rows. Runs at startup and before read-only endpoints (see <see cref="RecurringMaterializationFilter"/>).
-/// Idempotent: an occurrence that already exists for a template + date is skipped.
+/// Idempotent: an occurrence that already exists for a template + date is skipped, and a unique
+/// index makes concurrent runs safe (the loser retries).
 /// </summary>
 public sealed class RecurringMaterializer(AppDbContext db, TimeProvider clock, ILogger<RecurringMaterializer> logger)
 {
     public async Task<int> MaterializeDueAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await MaterializeCoreAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // A concurrent request booked the same occurrence first (unique index on template + date).
+            // Drop our pending changes and re-run: it now sees the other bookings and skips them.
+            db.ChangeTracker.Clear();
+            return await MaterializeCoreAsync(ct);
+        }
+    }
+
+    private async Task<int> MaterializeCoreAsync(CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
 
