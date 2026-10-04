@@ -23,6 +23,7 @@ import {
   TableRow,
   MessageBar,
   makeStyles,
+  mergeClasses,
   tokens,
 } from '@fluentui/react-components'
 import { DonutChart, ResponsiveContainer } from '@fluentui/react-charts'
@@ -68,6 +69,7 @@ const useStyles = makeStyles({
   },
   budgetHint: { marginTop: '10px', display: 'block', color: tokens.colorNeutralForeground3 },
   chartWrap: { width: '100%', minHeight: '260px' },
+  amount: { justifyContent: 'flex-end', textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
   positive: { color: tokens.colorPaletteGreenForeground1 },
   negative: { color: tokens.colorPaletteRedForeground1 },
   form: { display: 'flex', flexDirection: 'column', rowGap: '12px' },
@@ -217,7 +219,7 @@ function DashboardPage() {
                 <TableRow>
                   <TableHeaderCell>Konto</TableHeaderCell>
                   <TableHeaderCell>Typ</TableHeaderCell>
-                  <TableHeaderCell>Saldo</TableHeaderCell>
+                  <TableHeaderCell className={styles.amount}>Saldo</TableHeaderCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -225,7 +227,12 @@ function DashboardPage() {
                   <TableRow key={a.id}>
                     <TableCell>{a.name}</TableCell>
                     <TableCell>{accountTypeLabel[a.type]}</TableCell>
-                    <TableCell className={a.currentBalance < 0 ? styles.negative : styles.positive}>
+                    <TableCell
+                      className={mergeClasses(
+                        styles.amount,
+                        a.currentBalance < 0 ? styles.negative : styles.positive,
+                      )}
+                    >
                       {formatEuro(a.currentBalance)}
                     </TableCell>
                   </TableRow>
