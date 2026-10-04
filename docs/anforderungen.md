@@ -86,7 +86,7 @@ Mac. Betrieb möglichst kostenlos innerhalb der Free-Tiers von Railway und Neon.
 | 7.2 | Monatlich an einem festen Tag automatisch als echte Buchung angelegt. | ✅ `DayOfMonth` 1–31 (auf Monatslänge geklammert) |
 | 7.3 | Optionaler Zeitraum (Start-/Enddatum) und Aktiv-Schalter. | ✅ `StartDate`, `EndDate?`, `IsActive` |
 | 7.4 | Erzeugte Buchungen tragen ihr korrektes historisches Datum. | ✅ [`RecurringSchedule`](../backend/src/MyFinances.Data/Recurring/RecurringSchedule.cs) / [`RecurringMaterializer`](../backend/src/MyFinances.Api/Recurring/RecurringMaterializer.cs) |
-| 7.5 | Keine Dubletten, auch bei mehrfachem Auslösen. | ✅ idempotenter Guard auf `(RecurringTemplateId, BookedOn)` |
+| 7.5 | Keine Dubletten, auch bei mehrfachem Auslösen. | ✅ idempotenter Guard + partieller Unique-Index auf `(RecurringTemplateId, BookedOn)`; bei parallelen Requests (z. B. Dashboard-Aufrufe am Monatswechsel) unterliegt der Verlierer und läuft erneut |
 | 7.6 | Löschen einer Vorlage lässt bereits erzeugte Buchungen bestehen. | ✅ `RecurringTemplateId` wird auf NULL gesetzt |
 | 7.7 | Materialisierung ohne Cron/Timer. | ✅ läuft beim API-Start und via Endpoint-Filter vor lesenden GETs (`transactions`, `dashboard`, `reports`) |
 

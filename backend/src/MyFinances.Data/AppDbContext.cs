@@ -58,7 +58,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasIndex(t => t.AccountId);
             e.HasIndex(t => t.CategoryId);
             e.HasIndex(t => t.BookedOn);
-            e.HasIndex(t => new { t.RecurringTemplateId, t.BookedOn });
+            // Guards the materialiser against concurrent runs booking the same occurrence twice.
+            e.HasIndex(t => new { t.RecurringTemplateId, t.BookedOn })
+                .IsUnique()
+                .HasFilter("\"RecurringTemplateId\" IS NOT NULL");
         });
 
         builder.Entity<Transfer>(e =>
